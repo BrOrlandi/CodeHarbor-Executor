@@ -66,7 +66,8 @@ Authorization: Bearer YOUR_SECRET_KEY
   "cacheKey": "workflow-123-node-456",
   "options": {
     "timeout": 30000,
-    "forceUpdate": false
+    "forceUpdate": false,
+    "debug": true
   }
 }
 ```
@@ -79,13 +80,53 @@ Authorization: Bearer YOUR_SECRET_KEY
 - `options`:
   - `timeout`: Custom execution timeout in milliseconds
   - `forceUpdate`: Force fresh installation of dependencies
+  - `debug`: When set to true, returns detailed debug information about the execution
 
 **Response:**
 
 ```json
 {
   "success": true,
-  "data": [2, 4, 6, 8, 10]
+  "data": [2, 4, 6, 8, 10],
+  "debug": {
+    "nodeVersion": "v16.14.0",
+    "platform": "linux",
+    "arch": "x64",
+    "dependencies": {
+      "lodash": "4.17.21"
+    },
+    "executionTimeMs": 12.34,
+    "server": {
+      "nodeVersion": "v16.14.0",
+      "platform": "linux",
+      "architecture": "x64",
+      "totalMemory": "8192 MB",
+      "freeMemory": "4096 MB",
+      "cpus": 8,
+      "uptime": "120 minutes"
+    },
+    "cache": {
+      "usedCache": true,
+      "cacheKey": "workflow-123-node-456",
+      "cachePath": "/app/cache/workflow-123-node-456",
+      "currentCacheSize": 5242880,
+      "currentCacheSizeFormatted": "5 MB",
+      "totalCacheSize": 52428800,
+      "totalCacheSizeFormatted": "50 MB"
+    },
+    "execution": {
+      "startTime": "2023-06-25T14:30:45.123Z",
+      "dependencies": {
+        "lodash": "4.17.21"
+      },
+      "extractedDependencies": {
+        "lodash": "latest"
+      },
+      "dependencyInstallTimeMs": 345.67,
+      "executionTimeMs": 12.34,
+      "totalResponseTimeMs": 358.01
+    }
+  }
 }
 ```
 
@@ -98,7 +139,10 @@ curl -X POST http://localhost:3000/execute \
   -d '{
     "code": "module.exports = function(items) { return items.map(item => item * 2); }",
     "items": [1, 2, 3, 4, 5],
-    "cacheKey": "workflow-123-node-456"
+    "cacheKey": "workflow-123-node-456",
+    "options": {
+      "debug": true
+    }
   }'
 ```
 
