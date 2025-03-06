@@ -1,0 +1,17 @@
+{
+  "name": "codeharbor-executor",
+  "version": "1.0.0",
+  "description": "Node.js code execution service for CodeHarbor n8n node",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "express": "^4.21.2"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
