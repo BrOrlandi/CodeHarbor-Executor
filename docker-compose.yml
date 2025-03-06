@@ -1,0 +1,28 @@
+services:
+  codeharbor-executor:
+    build: ./codeharbor-executor
+    container_name: codeharbor-executor
+    restart: unless-stopped
+    volumes:
+      - codeharbor_cache:/app/cache
+    environment:
+      - PORT=3000
+      - EXECUTION_DIR=/tmp/codeharbor
+      - CACHE_DIR=/app/cache
+      - NODE_ENV=production
+      # Add any other environment variables you need here
+    networks:
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.codeharbor.rule=Host(`codeharbor.brorlandi.xyz`)"
+      - "traefik.http.routers.codeharbor.entrypoints=web-secure"
+      - "traefik.http.routers.codeharbor.tls.certresolver=mycertresolver"
+      - "traefik.http.services.codeharbor.loadbalancer.server.port=3000"
+
+networks:
+  traefik:
+    external: true
+
+volumes:
+  codeharbor_cache:
