@@ -1,0 +1,23 @@
+meta {
+  name: Execute No Deps
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{HOSTNAME}}/execute
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{AUTH_TOKEN}}
+}
+
+body:json {
+  {
+      "code": "module.exports = function(items) { return items.map(item => item * 2); }",
+      "items": [1, 2, 3, 4, 5],
+      "cacheKey": "bruno-rest-no-deps"
+  }
+}

@@ -1,0 +1,27 @@
+meta {
+  name: Puppeteer sample
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{HOSTNAME}}/execute
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{AUTH_TOKEN}}
+}
+
+body:json {
+  {
+    "code": "const puppeteer = require('puppeteer');\n\nmodule.exports = async function (items) {\n  // For each item, scrape some data from a web page\n  const browser = await puppeteer.launch();\n  const page = await browser.newPage();\n\n  // Example: navigate to example.com, take a screenshot\n  await page.goto('https://example.com');\n  const title = await page.title();\n\n  await browser.close();\n\n  // Return updated items with the scraped title\n  return items.map(item => ({\n    ...item,\n    json: {\n      ...item.json,\n      scrapedTitle: title\n    }\n  }));\n};",
+    "items": [1],
+    "cacheKey": "bruno-rest-puppeteer",
+    "options": {
+      "forceUpdate": false
+    }
+  }
+  
+}

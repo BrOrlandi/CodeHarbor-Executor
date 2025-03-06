@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "CodeHarbor-Executor",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

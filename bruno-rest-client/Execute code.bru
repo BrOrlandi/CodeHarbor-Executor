@@ -1,0 +1,26 @@
+meta {
+  name: Execute code
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{HOSTNAME}}/execute
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{AUTH_TOKEN}}
+}
+
+body:json {
+  {
+      "code": "const _ = require('lodash'); module.exports = function(items) { return _.map(items, item => item * 2); }",
+      "items": [1, 2, 3, 4, 5],
+    "cacheKey": "bruno-rest",
+    "options": {
+      "forceUpdate": false
+    }
+  }
+}
