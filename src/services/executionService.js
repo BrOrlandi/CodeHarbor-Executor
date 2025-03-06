@@ -186,6 +186,7 @@ class ExecutionService {
             const errorResponse = {
               success: false,
               error: 'Invalid output format',
+              stdout: stdout, // Include the raw stdout in the error response
             };
             if (collectDebugInfo && debugInfo) {
               errorResponse.debug = debugInfo;

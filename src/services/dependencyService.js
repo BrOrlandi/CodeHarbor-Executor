@@ -89,6 +89,61 @@ class DependencyService {
   }
 
   /**
+   * Get the actual installed versions of dependencies
+   */
+  async getInstalledVersions(codeDir, dependencies) {
+    const packageLockPath = path.join(codeDir, 'package-lock.json');
+    const installedDependencies = {};
+
+    try {
+      // Check if package-lock.json exists
+      const packageLockExists = await fs
+        .access(packageLockPath)
+        .then(() => true)
+        .catch(() => false);
+
+      if (packageLockExists) {
+        // Read actual versions from package-lock.json
+        const packageLock = JSON.parse(
+          await fs.readFile(packageLockPath, 'utf8')
+        );
+
+        for (const pkg of Object.keys(dependencies)) {
+          if (packageLock.dependencies && packageLock.dependencies[pkg]) {
+            installedDependencies[pkg] = packageLock.dependencies[pkg].version;
+          } else {
+            installedDependencies[pkg] = 'unknown';
+          }
+        }
+      } else {
+        // If no package-lock.json, try to get versions from node_modules
+        for (const pkg of Object.keys(dependencies)) {
+          try {
+            const pkgJsonPath = path.join(
+              codeDir,
+              'node_modules',
+              pkg,
+              'package.json'
+            );
+            const pkgJson = JSON.parse(await fs.readFile(pkgJsonPath, 'utf8'));
+            installedDependencies[pkg] = pkgJson.version;
+          } catch (err) {
+            installedDependencies[pkg] = 'unknown';
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error getting installed versions:', err);
+      // Fallback to using the dependency list without version info
+      for (const pkg of Object.keys(dependencies)) {
+        installedDependencies[pkg] = 'unknown';
+      }
+    }
+
+    return installedDependencies;
+  }
+
+  /**
    * Install dependencies
    */
   async installDependencies(
@@ -101,12 +156,13 @@ class DependencyService {
     // Ensure we have absolute paths for cache and target directories
     const cacheModulesPath = path.join(cachePath, 'node_modules');
     const targetNodeModules = path.join(codeDir, 'node_modules');
+    let actualDependencies = {};
 
     try {
       // If there are no dependencies, just return
       if (Object.keys(dependencies).length === 0) {
         console.log('No dependencies to install');
-        return true;
+        return { success: true, dependencies: {} };
       }
 
       // Check if we already have these dependencies cached and not forcing update
@@ -121,7 +177,12 @@ class DependencyService {
           // Create symlink from cache to execution directory
           try {
             await fs.symlink(cacheModulesPath, targetNodeModules);
-            return true;
+            // Get the actual versions from the cache
+            actualDependencies = await this.getInstalledVersions(
+              codeDir,
+              dependencies
+            );
+            return { success: true, dependencies: actualDependencies };
           } catch (error) {
             console.error(
               'Error creating symlink, falling back to copy:',
@@ -131,7 +192,11 @@ class DependencyService {
             await fs.cp(cacheModulesPath, targetNodeModules, {
               recursive: true,
             });
-            return true;
+            actualDependencies = await this.getInstalledVersions(
+              codeDir,
+              dependencies
+            );
+            return { success: true, dependencies: actualDependencies };
           }
         }
       } else {
@@ -162,6 +227,12 @@ class DependencyService {
               console.error(`stderr: ${stderr}`);
               return reject(error);
             }
+
+            // Get the actual installed versions
+            actualDependencies = await this.getInstalledVersions(
+              codeDir,
+              dependencies
+            );
 
             // Cache the node_modules for future use if not forcing update
             if (!forceUpdate) {
@@ -201,7 +272,7 @@ class DependencyService {
             }
 
             console.log('Dependencies installed successfully');
-            resolve(true);
+            resolve({ success: true, dependencies: actualDependencies });
           }
         );
       });

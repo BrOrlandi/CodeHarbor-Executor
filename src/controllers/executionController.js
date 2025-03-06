@@ -1,6 +1,8 @@
 const path = require('path');
 const os = require('os');
 const { performance } = require('perf_hooks');
+const crypto = require('crypto');
+const fs = require('fs/promises');
 
 class ExecutionController {
   constructor(dependencyService, executionService, cacheService, cacheDir) {
@@ -92,7 +94,13 @@ class ExecutionController {
     console.log('Extracted dependencies:', dependencies);
 
     if (debugInfo) {
-      debugInfo.execution.extractedDependencies = dependencies;
+      // Store only the package names without versions in extractedDependencies
+      debugInfo.execution.extractedDependencies = Object.keys(
+        dependencies
+      ).reduce((acc, pkg) => {
+        acc[pkg] = null; // Just store the package name, we'll update with actual versions later
+        return acc;
+      }, {});
     }
 
     // Create execution directory
@@ -116,7 +124,7 @@ class ExecutionController {
 
       // Install dependencies
       const installStartTime = performance.now();
-      await this.dependencyService.installDependencies(
+      const installResult = await this.dependencyService.installDependencies(
         dependencies,
         executionDir,
         cacheKey,
@@ -150,6 +158,12 @@ class ExecutionController {
         );
         debugInfo.cache.totalCacheSize = totalSize;
         debugInfo.cache.totalCacheSizeFormatted = this.formatBytes(totalSize);
+
+        // Store actual installed dependencies for debug info
+        debugInfo.execution.installedDependencies = installResult.dependencies;
+
+        // Replace the extracted dependencies with actual installed versions in the debug output
+        debugInfo.execution.extractedDependencies = installResult.dependencies;
       }
 
       // Execute the code
