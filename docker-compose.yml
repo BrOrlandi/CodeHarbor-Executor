@@ -12,6 +12,7 @@ services:
       - NODE_ENV=production
       - SECRET_KEY=${CODEHARBOR_SECRET_KEY:-changeme}  # Secret key for authentication
       - DEFAULT_TIMEOUT=${CODEHARBOR_TIMEOUT:-60000}   # Default timeout in milliseconds
+      - CACHE_SIZE_LIMIT=${CODEHARBOR_CACHE_SIZE:-1GB} # Max cache size with human-readable values
       # Add any other environment variables you need here
     networks:
       - traefik

@@ -11,7 +11,35 @@ const PORT = process.env.PORT || 3000;
 const EXECUTION_DIR = process.env.EXECUTION_DIR || './executions';
 const CACHE_DIR = process.env.CACHE_DIR || './dependencies-cache';
 const SECRET_KEY = process.env.SECRET_KEY || '';
-const DEFAULT_TIMEOUT = parseInt(process.env.DEFAULT_TIMEOUT || '60000', 10); // 30 seconds default
+const DEFAULT_TIMEOUT = parseInt(process.env.DEFAULT_TIMEOUT || '60000', 10); // 60 seconds default
+
+// Function to parse human-readable file sizes
+function parseFileSize(sizeStr) {
+  if (typeof sizeStr !== 'string') {
+    return sizeStr;
+  }
+
+  const sizeParts = sizeStr.match(/^(\d+(?:\.\d+)?)\s*([KMGT]?B)$/i);
+  if (!sizeParts) {
+    return parseInt(sizeStr, 10) || 1073741824; // Default to 1GB if invalid
+  }
+
+  const size = parseFloat(sizeParts[1]);
+  const unit = sizeParts[2].toUpperCase();
+
+  const units = {
+    B: 1,
+    KB: 1024,
+    MB: 1024 * 1024,
+    GB: 1024 * 1024 * 1024,
+    TB: 1024 * 1024 * 1024 * 1024,
+  };
+
+  return size * (units[unit] || 1);
+}
+
+// Parse CACHE_SIZE_LIMIT with support for human-readable sizes
+const CACHE_SIZE_LIMIT = parseFileSize(process.env.CACHE_SIZE_LIMIT || '1GB');
 
 if (!SECRET_KEY) {
   console.warn(
@@ -140,6 +168,107 @@ function isNativeModule(moduleName) {
   return nativeModules.includes(moduleName);
 }
 
+// Calculate the size of a directory recursively
+async function getDirectorySize(directoryPath) {
+  let totalSize = 0;
+
+  try {
+    const files = await fs.readdir(directoryPath);
+
+    for (const file of files) {
+      const filePath = path.join(directoryPath, file);
+      const stats = await fs.stat(filePath);
+
+      if (stats.isDirectory()) {
+        totalSize += await getDirectorySize(filePath);
+      } else {
+        totalSize += stats.size;
+      }
+    }
+  } catch (error) {
+    console.error(`Error calculating size of ${directoryPath}:`, error);
+  }
+
+  return totalSize;
+}
+
+// Get cache entry information with metadata
+async function getCacheEntries() {
+  try {
+    const entries = await fs.readdir(CACHE_DIR);
+    const cacheInfo = [];
+
+    for (const entry of entries) {
+      const entryPath = path.join(CACHE_DIR, entry);
+      const stats = await fs.stat(entryPath);
+
+      if (stats.isDirectory()) {
+        const size = await getDirectorySize(entryPath);
+        cacheInfo.push({
+          key: entry,
+          path: entryPath,
+          size,
+          lastModified: stats.mtime,
+        });
+      }
+    }
+
+    return cacheInfo;
+  } catch (error) {
+    console.error('Error reading cache directory:', error);
+    return [];
+  }
+}
+
+// Clean up old caches when the total size exceeds the limit
+async function cleanupCache() {
+  try {
+    console.log('Checking cache size...');
+
+    const cacheEntries = await getCacheEntries();
+    const totalSize = cacheEntries.reduce((sum, entry) => sum + entry.size, 0);
+
+    console.log(
+      `Current cache size: ${(totalSize / 1024 / 1024).toFixed(2)} MB`
+    );
+    console.log(
+      `Cache size limit: ${(CACHE_SIZE_LIMIT / 1024 / 1024).toFixed(2)} MB`
+    );
+
+    if (totalSize > CACHE_SIZE_LIMIT) {
+      console.log('Cache size exceeds limit, cleaning up old entries...');
+
+      // Sort entries by last modified time (oldest first)
+      cacheEntries.sort((a, b) => a.lastModified - b.lastModified);
+
+      let freedSize = 0;
+      let sizeToFree = totalSize - CACHE_SIZE_LIMIT + CACHE_SIZE_LIMIT * 0.2; // Free additional 20% to avoid frequent cleanups
+
+      for (const entry of cacheEntries) {
+        console.log(
+          `Removing cache entry: ${entry.key} (${(
+            entry.size /
+            1024 /
+            1024
+          ).toFixed(2)} MB)`
+        );
+        await fs.rm(entry.path, { recursive: true, force: true });
+
+        freedSize += entry.size;
+        if (freedSize >= sizeToFree) {
+          break;
+        }
+      }
+
+      console.log(
+        `Freed ${(freedSize / 1024 / 1024).toFixed(2)} MB of cache space`
+      );
+    }
+  } catch (error) {
+    console.error('Error cleaning up cache:', error);
+  }
+}
+
 // Install dependencies
 async function installDependencies(
   dependencies,
@@ -229,6 +358,9 @@ async function installDependencies(
                   force: true,
                 });
               }
+
+              // Check and clean up cache if needed before adding new entry
+              await cleanupCache();
 
               // Create new cache
               await fs.mkdir(path.join(CACHE_DIR, cacheKey), {
@@ -442,10 +574,26 @@ app.get('/health', (req, res) => {
 // Start the server
 async function start() {
   await ensureDirs();
+  await cleanupCache(); // Initial cache cleanup on startup
+
   app.listen(PORT, () => {
     console.log(`CodeHarbor Executor running on port ${PORT}`);
     console.log(`Default execution timeout: ${DEFAULT_TIMEOUT}ms`);
     console.log(`Authentication: ${SECRET_KEY ? 'enabled' : 'disabled'}`);
+
+    // Format the cache size for display
+    let displaySize;
+    if (CACHE_SIZE_LIMIT >= 1024 * 1024 * 1024) {
+      displaySize = `${(CACHE_SIZE_LIMIT / 1024 / 1024 / 1024).toFixed(2)} GB`;
+    } else if (CACHE_SIZE_LIMIT >= 1024 * 1024) {
+      displaySize = `${(CACHE_SIZE_LIMIT / 1024 / 1024).toFixed(2)} MB`;
+    } else if (CACHE_SIZE_LIMIT >= 1024) {
+      displaySize = `${(CACHE_SIZE_LIMIT / 1024).toFixed(2)} KB`;
+    } else {
+      displaySize = `${CACHE_SIZE_LIMIT} bytes`;
+    }
+
+    console.log(`Cache size limit: ${displaySize}`);
   });
 }
 

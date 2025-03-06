@@ -31,6 +31,7 @@ EXECUTION_DIR=./executions
 CACHE_DIR=./dependencies-cache
 SECRET_KEY=your-secret-key-here
 DEFAULT_TIMEOUT=60000
+CACHE_SIZE_LIMIT=1GB
 ```
 
 The following environment variables can be used to configure the service:
@@ -40,6 +41,7 @@ The following environment variables can be used to configure the service:
 - `CACHE_DIR`: Directory for cached dependencies (default: './dependencies-cache')
 - `SECRET_KEY`: Authentication token for API calls (default: none)
 - `DEFAULT_TIMEOUT`: Default execution timeout in milliseconds (default: 60000)
+- `CACHE_SIZE_LIMIT`: Maximum cache directory size with support for human-readable values like "500MB", "1GB", etc. (default: "1GB")
 
 ## API
 
