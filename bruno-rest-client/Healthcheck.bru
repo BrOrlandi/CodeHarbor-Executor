@@ -1,0 +1,15 @@
+meta {
+  name: Healthcheck
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{HOSTNAME}}/health
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{AUTH_TOKEN}}xxx
+}
