@@ -3,7 +3,6 @@ const express = require('express');
 const { exec, spawn } = require('child_process');
 const fs = require('fs/promises');
 const path = require('path');
-const crypto = require('crypto');
 const bodyParser = require('body-parser');
 
 const app = express();
@@ -25,21 +24,84 @@ async function ensureDirs() {
   }
 }
 
-// Generate a hash for dependencies to use for caching
-function generateDependencyHash(dependencies) {
-  const hash = crypto.createHash('sha256');
-  const sortedDeps = Object.entries(dependencies)
-    .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
-    .map(([key, value]) => `${key}@${value}`)
-    .join(',');
+// Extract dependencies from code
+function extractDependencies(code) {
+  const dependencies = {};
 
-  return hash.update(sortedDeps).digest('hex');
+  // Match both require statements and import statements
+  const requireRegex = /require\s*\(\s*['"]([^@\s'"]+)(?:@[^'"]+)?['"]\s*\)/g;
+  const importRegex =
+    /import\s+(?:(?:\{[^}]*\}|\*\s+as\s+[^\s]+|[^\s,{}]+)(?:\s*,\s*(?:\{[^}]*\}|\*\s+as\s+[^\s]+|[^\s,{}]+))*\s+from\s+)?['"]([^@\s'"]+)(?:@[^'"]+)?['"]/g;
+
+  let match;
+
+  // Extract from require statements
+  while ((match = requireRegex.exec(code)) !== null) {
+    const packageName = match[1];
+    // Exclude native Node.js modules
+    if (!isNativeModule(packageName)) {
+      dependencies[packageName] = 'latest';
+    }
+  }
+
+  // Extract from import statements
+  while ((match = importRegex.exec(code)) !== null) {
+    const packageName = match[2];
+    // Exclude native Node.js modules
+    if (!isNativeModule(packageName)) {
+      dependencies[packageName] = 'latest';
+    }
+  }
+
+  return dependencies;
+}
+
+// Check if a module is a native Node.js module
+function isNativeModule(moduleName) {
+  const nativeModules = [
+    'assert',
+    'buffer',
+    'child_process',
+    'cluster',
+    'console',
+    'constants',
+    'crypto',
+    'dgram',
+    'dns',
+    'domain',
+    'events',
+    'fs',
+    'http',
+    'https',
+    'module',
+    'net',
+    'os',
+    'path',
+    'punycode',
+    'querystring',
+    'readline',
+    'repl',
+    'stream',
+    'string_decoder',
+    'sys',
+    'timers',
+    'tls',
+    'tty',
+    'url',
+    'util',
+    'v8',
+    'vm',
+    'zlib',
+    'process',
+  ];
+
+  return nativeModules.includes(moduleName);
 }
 
 // Install dependencies
-async function installDependencies(dependencies, codeDir) {
-  const depsHash = generateDependencyHash(dependencies);
-  const cachePath = path.join(CACHE_DIR, depsHash, 'node_modules');
+async function installDependencies(dependencies, codeDir, cacheKey) {
+  // Use the provided cache key for the dependencies cache
+  const cachePath = path.join(CACHE_DIR, cacheKey, 'node_modules');
   const targetNodeModules = path.join(codeDir, 'node_modules');
 
   try {
@@ -50,7 +112,7 @@ async function installDependencies(dependencies, codeDir) {
       .catch(() => false);
 
     if (cacheExists) {
-      console.log('Using cached dependencies');
+      console.log(`Using cached dependencies for key: ${cacheKey}`);
       // Create symlink from cache to execution directory
       try {
         await fs.symlink(cachePath, targetNodeModules);
@@ -61,6 +123,12 @@ async function installDependencies(dependencies, codeDir) {
         await fs.cp(cachePath, targetNodeModules, { recursive: true });
         return true;
       }
+    }
+
+    // If there are no dependencies, just return
+    if (Object.keys(dependencies).length === 0) {
+      console.log('No dependencies to install');
+      return true;
     }
 
     // Create package.json
@@ -76,7 +144,7 @@ async function installDependencies(dependencies, codeDir) {
     );
 
     // Install dependencies
-    console.log('Installing dependencies...');
+    console.log('Installing dependencies:', dependencies);
     return new Promise((resolve, reject) => {
       exec(
         'npm install --production',
@@ -90,9 +158,11 @@ async function installDependencies(dependencies, codeDir) {
 
           // Cache the node_modules for future use
           try {
-            await fs.mkdir(path.join(CACHE_DIR, depsHash), { recursive: true });
+            await fs.mkdir(path.join(CACHE_DIR, cacheKey), { recursive: true });
             await fs.cp(targetNodeModules, cachePath, { recursive: true });
-            console.log('Dependencies cached successfully');
+            console.log(
+              `Dependencies cached successfully with key: ${cacheKey}`
+            );
           } catch (cacheError) {
             console.error('Error caching dependencies:', cacheError);
             // Continue even if caching fails
@@ -206,31 +276,36 @@ async function executeCode(code, items, executionDir) {
 }
 
 // API endpoint to execute code
-// API call example:
-// POST /execute
-// {
-//   "code": "module.exports = items => items.map(item => item * 2)",
-//   "items": [1, 2, 3, 4]
-// }
-
 app.post('/execute', async (req, res) => {
-  const { code, dependencies = {}, items = [] } = req.body;
+  const { code, items = [], cacheKey } = req.body;
 
   if (!code) {
     return res.status(400).json({ success: false, error: 'Code is required' });
   }
 
+  if (!cacheKey) {
+    return res.status(400).json({
+      success: false,
+      error:
+        'Cache key is required (should be a hash of workflow ID and node name)',
+    });
+  }
+
+  // Extract dependencies from the code
+  const dependencies = extractDependencies(code);
+  console.log('Extracted dependencies:', dependencies);
+
   // Create a unique execution directory
-  const executionId = crypto.randomUUID();
+  const executionId = `exec-${Date.now()}-${Math.random()
+    .toString(36)
+    .substring(2, 7)}`;
   const executionDir = path.join(EXECUTION_DIR, executionId);
 
   try {
     await fs.mkdir(executionDir, { recursive: true });
 
     // Install dependencies if any
-    if (Object.keys(dependencies).length > 0) {
-      await installDependencies(dependencies, executionDir);
-    }
+    await installDependencies(dependencies, executionDir, cacheKey);
 
     // Execute the code
     const result = await executeCode(code, items, executionDir);
