@@ -1,6 +1,6 @@
 services:
   codeharbor-executor:
-    build: ./codeharbor-executor
+    build: .
     container_name: codeharbor-executor
     restart: unless-stopped
     volumes:

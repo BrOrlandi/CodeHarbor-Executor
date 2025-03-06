@@ -8,15 +8,13 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --only=production
 
-# Create directories for execution and caching
+# Create directories to match environment variables in docker-compose.yml
 RUN mkdir -p /app/cache /tmp/codeharbor
 
 # Copy app source
 COPY . .
 
-# Define volumes for persistent storage
-# /app/cache - For dependency caching
-# /tmp/codeharbor - For temporary execution (though usually not necessary to persist)
+# Define volume for persistent cache storage
 VOLUME ["/app/cache"]
 
 # Expose the port
