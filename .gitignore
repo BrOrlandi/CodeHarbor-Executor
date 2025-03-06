@@ -1,3 +1,6 @@
+executions/
+dependencies-cache/
+
 # Dependency directories
 node_modules/
 jspm_packages/
