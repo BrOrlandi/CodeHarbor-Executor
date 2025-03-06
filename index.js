@@ -1,4 +1,5 @@
 // codeharbor-executor/index.js
+require('dotenv').config();
 const express = require('express');
 const { exec, spawn } = require('child_process');
 const fs = require('fs/promises');
@@ -9,9 +10,50 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const EXECUTION_DIR = process.env.EXECUTION_DIR || './executions';
 const CACHE_DIR = process.env.CACHE_DIR || './dependencies-cache';
+const SECRET_KEY = process.env.SECRET_KEY || '';
+const DEFAULT_TIMEOUT = parseInt(process.env.DEFAULT_TIMEOUT || '60000', 10); // 30 seconds default
+
+if (!SECRET_KEY) {
+  console.warn(
+    'WARNING: No SECRET_KEY set. Server will run without authentication!'
+  );
+}
 
 // Middleware
 app.use(bodyParser.json({ limit: '50mb' }));
+
+// Authentication middleware
+app.use((req, res, next) => {
+  // Skip auth for health check
+  if (req.path === '/health') {
+    return next();
+  }
+
+  // Skip auth if no secret key is configured
+  if (!SECRET_KEY) {
+    return next();
+  }
+
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      success: false,
+      error: 'Authentication required',
+    });
+  }
+
+  const token = authHeader.split(' ')[1];
+
+  if (token !== SECRET_KEY) {
+    return res.status(403).json({
+      success: false,
+      error: 'Invalid authentication token',
+    });
+  }
+
+  next();
+});
 
 // Ensure directories exist
 async function ensureDirs() {
@@ -99,36 +141,52 @@ function isNativeModule(moduleName) {
 }
 
 // Install dependencies
-async function installDependencies(dependencies, codeDir, cacheKey) {
+async function installDependencies(
+  dependencies,
+  codeDir,
+  cacheKey,
+  forceUpdate = false
+) {
   // Use the provided cache key for the dependencies cache
-  const cachePath = path.join(CACHE_DIR, cacheKey, 'node_modules');
+  // Ensure we have absolute paths for cache and target directories
+  const cachePath = path.join(
+    path.resolve(CACHE_DIR),
+    cacheKey,
+    'node_modules'
+  );
   const targetNodeModules = path.join(codeDir, 'node_modules');
 
+  console.log({ cachePath, targetNodeModules });
+
   try {
-    // Check if we already have these dependencies cached
-    const cacheExists = await fs
-      .access(cachePath)
-      .then(() => true)
-      .catch(() => false);
-
-    if (cacheExists) {
-      console.log(`Using cached dependencies for key: ${cacheKey}`);
-      // Create symlink from cache to execution directory
-      try {
-        await fs.symlink(cachePath, targetNodeModules);
-        return true;
-      } catch (error) {
-        console.error('Error creating symlink, falling back to copy:', error);
-        // If symlink fails (e.g., on some Windows setups), try copying
-        await fs.cp(cachePath, targetNodeModules, { recursive: true });
-        return true;
-      }
-    }
-
     // If there are no dependencies, just return
     if (Object.keys(dependencies).length === 0) {
       console.log('No dependencies to install');
       return true;
+    }
+
+    // Check if we already have these dependencies cached and not forcing update
+    if (!forceUpdate) {
+      const cacheExists = await fs
+        .access(cachePath)
+        .then(() => true)
+        .catch(() => false);
+
+      if (cacheExists) {
+        console.log(`Using cached dependencies for key: ${cacheKey}`);
+        // Create symlink from cache to execution directory
+        try {
+          await fs.symlink(cachePath, targetNodeModules);
+          return true;
+        } catch (error) {
+          console.error('Error creating symlink, falling back to copy:', error);
+          // If symlink fails (e.g., on some Windows setups), try copying
+          await fs.cp(cachePath, targetNodeModules, { recursive: true });
+          return true;
+        }
+      }
+    } else {
+      console.log('Force update enabled, ignoring cache');
     }
 
     // Create package.json
@@ -156,16 +214,36 @@ async function installDependencies(dependencies, codeDir, cacheKey) {
             return reject(error);
           }
 
-          // Cache the node_modules for future use
-          try {
-            await fs.mkdir(path.join(CACHE_DIR, cacheKey), { recursive: true });
-            await fs.cp(targetNodeModules, cachePath, { recursive: true });
-            console.log(
-              `Dependencies cached successfully with key: ${cacheKey}`
-            );
-          } catch (cacheError) {
-            console.error('Error caching dependencies:', cacheError);
-            // Continue even if caching fails
+          // Cache the node_modules for future use if not forcing update
+          if (!forceUpdate) {
+            try {
+              // Clean up old cache if it exists
+              const cacheExists = await fs
+                .access(path.join(CACHE_DIR, cacheKey))
+                .then(() => true)
+                .catch(() => false);
+
+              if (cacheExists) {
+                await fs.rm(path.join(CACHE_DIR, cacheKey), {
+                  recursive: true,
+                  force: true,
+                });
+              }
+
+              // Create new cache
+              await fs.mkdir(path.join(CACHE_DIR, cacheKey), {
+                recursive: true,
+              });
+              await fs.cp(targetNodeModules, cachePath, { recursive: true });
+              console.log(
+                `Dependencies cached successfully with key: ${cacheKey}`
+              );
+            } catch (cacheError) {
+              console.error('Error caching dependencies:', cacheError);
+              // Continue even if caching fails
+            }
+          } else {
+            console.log('Skipping cache update due to force update option');
           }
 
           console.log('Dependencies installed successfully');
@@ -180,7 +258,7 @@ async function installDependencies(dependencies, codeDir, cacheKey) {
 }
 
 // Execute code in a sandboxed environment
-async function executeCode(code, items, executionDir) {
+async function executeCode(code, items, executionDir, timeout) {
   const executionFile = path.join(executionDir, 'execution.js');
   const dataFile = path.join(executionDir, 'data.json');
   const wrapperFile = path.join(executionDir, 'wrapper.js');
@@ -227,7 +305,7 @@ async function executeCode(code, items, executionDir) {
     return new Promise((resolve, reject) => {
       const process = spawn('node', ['wrapper.js'], {
         cwd: executionDir,
-        timeout: 30000, // 30 second timeout
+        timeout: timeout || DEFAULT_TIMEOUT,
       });
 
       let stdout = '';
@@ -277,7 +355,7 @@ async function executeCode(code, items, executionDir) {
 
 // API endpoint to execute code
 app.post('/execute', async (req, res) => {
-  const { code, items = [], cacheKey } = req.body;
+  const { code, items = [], cacheKey, options = {} } = req.body;
 
   if (!code) {
     return res.status(400).json({ success: false, error: 'Code is required' });
@@ -290,6 +368,15 @@ app.post('/execute', async (req, res) => {
         'Cache key is required (should be a hash of workflow ID and node name)',
     });
   }
+
+  // Extract options
+  const executionTimeout = options.timeout || DEFAULT_TIMEOUT;
+  const forceUpdate = options.forceUpdate || false;
+
+  // Log execution request
+  console.log(
+    `Execution request: cacheKey=${cacheKey}, timeout=${executionTimeout}ms, forceUpdate=${forceUpdate}`
+  );
 
   // Extract dependencies from the code
   const dependencies = extractDependencies(code);
@@ -305,10 +392,20 @@ app.post('/execute', async (req, res) => {
     await fs.mkdir(executionDir, { recursive: true });
 
     // Install dependencies if any
-    await installDependencies(dependencies, executionDir, cacheKey);
+    await installDependencies(
+      dependencies,
+      executionDir,
+      cacheKey,
+      forceUpdate
+    );
 
     // Execute the code
-    const result = await executeCode(code, items, executionDir);
+    const result = await executeCode(
+      code,
+      items,
+      executionDir,
+      executionTimeout
+    );
 
     // Clean up the execution directory
     fs.rm(executionDir, { recursive: true, force: true }).catch((error) =>
@@ -334,7 +431,12 @@ app.post('/execute', async (req, res) => {
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
+  res.json({
+    status: 'ok',
+    version: '1.0.0',
+    auth: SECRET_KEY ? 'enabled' : 'disabled',
+    defaultTimeout: `${DEFAULT_TIMEOUT}ms`,
+  });
 });
 
 // Start the server
@@ -342,6 +444,8 @@ async function start() {
   await ensureDirs();
   app.listen(PORT, () => {
     console.log(`CodeHarbor Executor running on port ${PORT}`);
+    console.log(`Default execution timeout: ${DEFAULT_TIMEOUT}ms`);
+    console.log(`Authentication: ${SECRET_KEY ? 'enabled' : 'disabled'}`);
   });
 }
 
