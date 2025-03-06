@@ -8,8 +8,8 @@ const bodyParser = require('body-parser');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const EXECUTION_DIR = process.env.EXECUTION_DIR || '/tmp/codeharbor';
-const CACHE_DIR = process.env.CACHE_DIR || '/app/cache';
+const EXECUTION_DIR = process.env.EXECUTION_DIR || './executions';
+const CACHE_DIR = process.env.CACHE_DIR || './dependencies-cache';
 
 // Middleware
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -206,6 +206,13 @@ async function executeCode(code, items, executionDir) {
 }
 
 // API endpoint to execute code
+// API call example:
+// POST /execute
+// {
+//   "code": "module.exports = items => items.map(item => item * 2)",
+//   "items": [1, 2, 3, 4]
+// }
+
 app.post('/execute', async (req, res) => {
   const { code, dependencies = {}, items = [] } = req.body;
 
