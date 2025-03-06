@@ -10,6 +10,8 @@ services:
       - EXECUTION_DIR=/tmp/codeharbor
       - CACHE_DIR=/app/cache
       - NODE_ENV=production
+      - SECRET_KEY=${CODEHARBOR_SECRET_KEY:-changeme}  # Secret key for authentication
+      - DEFAULT_TIMEOUT=${CODEHARBOR_TIMEOUT:-60000}   # Default timeout in milliseconds
       # Add any other environment variables you need here
     networks:
       - traefik
