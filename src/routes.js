@@ -3,14 +3,22 @@ const express = require('express');
 function setupRoutes(app, executionController) {
   const router = express.Router();
 
-  // API endpoint to execute code
-  router.post('/execute', (req, res) =>
-    executionController.executeCode(req, res)
+  // Execute code endpoint
+  router.post(
+    '/execute',
+    executionController.executeCode.bind(executionController)
   );
 
   // Health check endpoint
-  router.get('/health', (req, res) =>
-    executionController.healthCheck(req, res)
+  router.get(
+    '/health',
+    executionController.healthCheck.bind(executionController)
+  );
+
+  // Auth verification endpoint
+  router.get(
+    '/verify-auth',
+    executionController.verifyAuth.bind(executionController)
   );
 
   return router;

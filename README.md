@@ -174,6 +174,30 @@ curl -X POST http://localhost:3000/execute \
 }
 ```
 
+## Authentication Verification
+
+**Endpoint:** `GET /verify-auth`
+
+**Authentication:**
+
+```
+Authorization: Bearer YOUR_SECRET_KEY
+```
+
+(Required only if SECRET_KEY is configured)
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "message": "Authentication successful",
+  "authenticated": true
+}
+```
+
+If authentication fails, the server will return a 401 Unauthorized response.
+
 ## Security Considerations
 
 - Authentication via SECRET_KEY environment variable

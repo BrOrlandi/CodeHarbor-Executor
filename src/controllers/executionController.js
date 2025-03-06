@@ -228,6 +228,19 @@ class ExecutionController {
       defaultTimeout: `${req.app.get('defaultTimeout')}ms`,
     });
   }
+
+  /**
+   * Verify authentication credentials
+   */
+  async verifyAuth(req, res) {
+    // This endpoint will only be accessible if authentication passes
+    // So if we get here, the auth is valid
+    return res.json({
+      success: true,
+      message: 'Authentication successful',
+      authenticated: true,
+    });
+  }
 }
 
 module.exports = ExecutionController;
