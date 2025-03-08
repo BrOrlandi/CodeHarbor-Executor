@@ -61,7 +61,7 @@ Authorization: Bearer YOUR_SECRET_KEY
 
 ```json
 {
-  "code": "module.exports = function(items) { return items.map(item => item * 2); }",
+  "code": "module.exports = function(items) { console.log('Processing items:', items); return items.map(item => item * 2); }",
   "items": [1, 2, 3, 4, 5],
   "cacheKey": "workflow-123-node-456",
   "options": {
@@ -88,6 +88,13 @@ Authorization: Bearer YOUR_SECRET_KEY
 {
   "success": true,
   "data": [2, 4, 6, 8, 10],
+  "console": [
+    {
+      "type": "log",
+      "message": "Processing items: [1,2,3,4,5]",
+      "timestamp": "2023-06-25T14:30:45.123Z"
+    }
+  ],
   "debug": {
     "nodeVersion": "v16.14.0",
     "platform": "linux",
@@ -97,18 +104,11 @@ Authorization: Bearer YOUR_SECRET_KEY
     },
     "executionTimeMs": 12.34,
     "server": {
-      "nodeVersion": "v16.14.0",
-      "platform": "linux",
-      "architecture": "x64",
-      "totalMemory": "8192 MB",
-      "freeMemory": "4096 MB",
-      "cpus": 8,
-      "uptime": "120 minutes"
+      "nodeVersion": "v16.14.0"
     },
     "cache": {
       "usedCache": true,
       "cacheKey": "workflow-123-node-456",
-      "cachePath": "/app/cache/workflow-123-node-456",
       "currentCacheSize": 5242880,
       "currentCacheSizeFormatted": "5 MB",
       "totalCacheSize": 52428800,
@@ -123,12 +123,21 @@ Authorization: Bearer YOUR_SECRET_KEY
         "lodash": "latest"
       },
       "dependencyInstallTimeMs": 345.67,
-      "executionTimeMs": 12.34,
       "totalResponseTimeMs": 358.01
     }
   }
 }
 ```
+
+**Console Capture**
+
+All console output from the executed code is captured and returned in the `console` property of the response. Each log entry includes:
+
+- `type`: The type of console method used (log, info, warn, error, debug)
+- `message`: The content of the log message
+- `timestamp`: When the log was generated
+
+This allows you to see all output from the executed code without it interfering with the JSON response format.
 
 ### Example curl Request
 
@@ -137,7 +146,7 @@ curl -X POST http://localhost:3000/execute \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your-secret-key-here" \
   -d '{
-    "code": "module.exports = function(items) { return items.map(item => item * 2); }",
+    "code": "module.exports = function(items) { console.log(\"Processing items\"); return items.map(item => item * 2); }",
     "items": [1, 2, 3, 4, 5],
     "cacheKey": "workflow-123-node-456",
     "options": {
@@ -153,7 +162,7 @@ curl -X POST http://localhost:3000/execute \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer your-secret-key-here" \
   -d '{
-    "code": "const _ = require('\''lodash'\''); module.exports = function(items) { return _.map(items, item => item * 2); }",
+    "code": "const _ = require('\''lodash'\''); module.exports = function(items) { console.log(_.map(items, String)); return _.map(items, item => item * 2); }",
     "items": [1, 2, 3, 4, 5],
     "cacheKey": "workflow-123-node-456"
   }'
@@ -207,3 +216,19 @@ If authentication fails, the server will return a 401 Unauthorized response.
 - Dependency caching improves performance and reduces npm requests
 - Automatic cleanup of execution directories after code runs
 - Native Node.js modules detection to prevent unnecessary installations
+- Console output is captured and returned as structured data to prevent interference with the execution process
+
+## Features
+
+- **Code Execution**: Run JavaScript code with dependencies in a secure environment
+- **Dependency Management**: Automatically install and cache required packages
+- **Console Capture**: All console output (log, info, warn, error, debug) is captured and returned in the response
+- **Execution Timeout**: Prevent infinite loops and long-running processes
+- **Caching**: Reuse installed dependencies to improve performance
+- **Debug Information**: Optional detailed execution statistics and environment information
+
+# ToDos
+
+- [ ] Prevent installing dependencies in commented code
+- [ ] Add support for file uploads and binary data handling
+- [ ] Serve execution generated files for download
