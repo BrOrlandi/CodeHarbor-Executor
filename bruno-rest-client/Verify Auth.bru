@@ -1,12 +1,12 @@
 meta {
-  name: Execute code
+  name: Verify Auth
   type: http
-  seq: 2
+  seq: 6
 }
 
-post {
-  url: {{HOSTNAME}}/execute
-  body: json
+get {
+  url: {{HOSTNAME}}/verify-auth
+  body: none
   auth: bearer
 }
 
