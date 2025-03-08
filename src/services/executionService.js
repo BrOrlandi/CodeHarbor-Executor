@@ -52,6 +52,56 @@ class ExecutionService {
         const fs = require('fs');
         const path = require('path');
 
+        // Initialize console capture array
+        const consoleCapture = [];
+
+        // Save original console methods
+        const originalConsole = {
+          log: console.log,
+          info: console.info,
+          warn: console.warn,
+          error: console.error,
+          debug: console.debug
+        };
+
+        // Helper function to safely stringify objects
+        function safeStringify(obj) {
+          try {
+            if (obj === undefined) return 'undefined';
+            if (obj === null) return 'null';
+            if (typeof obj === 'object') return JSON.stringify(obj);
+            return String(obj);
+          } catch (err) {
+            return '[Circular or Non-Serializable Object]';
+          }
+        }
+
+        // Override console methods to capture output
+        console.log = function(...args) {
+          const message = args.map(safeStringify).join(' ');
+          consoleCapture.push({ type: 'log', message, timestamp: new Date().toISOString() });
+        };
+
+        console.info = function(...args) {
+          const message = args.map(safeStringify).join(' ');
+          consoleCapture.push({ type: 'info', message, timestamp: new Date().toISOString() });
+        };
+
+        console.warn = function(...args) {
+          const message = args.map(safeStringify).join(' ');
+          consoleCapture.push({ type: 'warn', message, timestamp: new Date().toISOString() });
+        };
+
+        console.error = function(...args) {
+          const message = args.map(safeStringify).join(' ');
+          consoleCapture.push({ type: 'error', message, timestamp: new Date().toISOString() });
+        };
+
+        console.debug = function(...args) {
+          const message = args.map(safeStringify).join(' ');
+          consoleCapture.push({ type: 'debug', message, timestamp: new Date().toISOString() });
+        };
+
         ${
           collectDebugInfo
             ? `
@@ -79,10 +129,10 @@ class ExecutionService {
 
         // Collect debug info
         const debugInfo = {
-          nodeVersion: process.version,
-          platform: process.platform,
-          arch: process.arch,
-          dependencies: collectDependencyInfo()
+          // nodeVersion: process.version,
+          // platform: process.platform,
+          // arch: process.arch,
+          // dependencies: collectDependencyInfo()
         };
 
         fs.writeFileSync('./debug.json', JSON.stringify(debugInfo));
@@ -102,14 +152,20 @@ class ExecutionService {
         Promise.resolve()
           .then(() => userModule(items))
           .then(result => {
-            // Write result to stdout
-            console.log(JSON.stringify({ success: true, data: result }));
+            // Write result to stdout using original console.log to avoid capture
+            originalConsole.log(JSON.stringify({
+              success: true,
+              data: result,
+              console: consoleCapture
+            }));
           })
           .catch(error => {
-            console.error(JSON.stringify({
+            // Write error to stderr using original console.error to avoid capture
+            originalConsole.error(JSON.stringify({
               success: false,
               error: error.message,
-              stack: error.stack
+              stack: error.stack,
+              console: consoleCapture
             }));
           });
       `;
@@ -167,6 +223,7 @@ class ExecutionService {
               const errorResponse = {
                 success: false,
                 error: stderr || 'Unknown execution error',
+                console: [], // Include empty console array for consistency
               };
               if (collectDebugInfo && debugInfo) {
                 errorResponse.debug = debugInfo;
@@ -181,12 +238,21 @@ class ExecutionService {
             if (collectDebugInfo && debugInfo) {
               result.debug = debugInfo;
             }
+
+            // Ensure console property exists
+            if (!result.console) {
+              result.console = [];
+            }
+
+            console.log(result);
+
             resolve(result);
           } catch (error) {
             const errorResponse = {
               success: false,
               error: 'Invalid output format',
               stdout: stdout, // Include the raw stdout in the error response
+              console: [], // Include empty console array for consistency
             };
             if (collectDebugInfo && debugInfo) {
               errorResponse.debug = debugInfo;
@@ -196,7 +262,11 @@ class ExecutionService {
         });
 
         process.on('error', (error) => {
-          const errorResponse = { success: false, error: error.message };
+          const errorResponse = {
+            success: false,
+            error: error.message,
+            console: [], // Include empty console array for consistency
+          };
           if (collectDebugInfo) {
             const endTime = performance.now();
             const executionTime = (endTime - startTime).toFixed(2);
@@ -210,7 +280,11 @@ class ExecutionService {
       });
     } catch (error) {
       console.error('Error in code execution:', error);
-      throw error;
+      throw {
+        success: false,
+        error: error.message,
+        console: [], // Include empty console array for consistency
+      };
     }
   }
 
