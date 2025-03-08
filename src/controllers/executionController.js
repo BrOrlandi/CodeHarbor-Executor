@@ -41,17 +41,10 @@ class ExecutionController {
       ? {
           server: {
             nodeVersion: process.version,
-            platform: process.platform,
-            architecture: os.arch(),
-            totalMemory: `${Math.round(os.totalmem() / (1024 * 1024))} MB`,
-            freeMemory: `${Math.round(os.freemem() / (1024 * 1024))} MB`,
-            cpus: os.cpus().length,
-            uptime: `${Math.round(os.uptime() / 60)} minutes`,
           },
           cache: {
             usedCache: false,
             cacheKey: cacheKey,
-            cachePath: '',
             currentCacheSize: 0,
             currentCacheSizeFormatted: '0 Bytes',
             totalCacheSize: 0,
@@ -59,8 +52,6 @@ class ExecutionController {
           },
           execution: {
             startTime: new Date().toISOString(),
-            dependencies: {},
-            executionTimeMs: 0,
             totalResponseTimeMs: 0,
           },
         }
@@ -93,16 +84,6 @@ class ExecutionController {
     const dependencies = this.dependencyService.extractDependencies(code);
     console.log('Extracted dependencies:', dependencies);
 
-    if (debugInfo) {
-      // Store only the package names without versions in extractedDependencies
-      debugInfo.execution.extractedDependencies = Object.keys(
-        dependencies
-      ).reduce((acc, pkg) => {
-        acc[pkg] = null; // Just store the package name, we'll update with actual versions later
-        return acc;
-      }, {});
-    }
-
     // Create execution directory
     let executionDir;
     try {
@@ -112,8 +93,6 @@ class ExecutionController {
       const cachePath = path.join(path.resolve(this.cacheDir), cacheKey);
 
       if (debugInfo) {
-        debugInfo.cache.cachePath = cachePath;
-
         // Get total cache size before installation
         const cacheEntries = await this.cacheService.getCacheEntries();
         debugInfo.cache.totalCacheSize = cacheEntries.reduce(
@@ -161,10 +140,10 @@ class ExecutionController {
 
         // Store actual installed dependencies for debug info
         debugInfo.execution.installedDependencies = installResult.dependencies;
-
-        // Replace the extracted dependencies with actual installed versions in the debug output
-        debugInfo.execution.extractedDependencies = installResult.dependencies;
       }
+
+      // Print items
+      // console.log('Items:', items);
 
       // Execute the code
       const result = await this.executionService.executeCode(
