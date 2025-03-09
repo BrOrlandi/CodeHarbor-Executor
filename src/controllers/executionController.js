@@ -28,6 +28,55 @@ class ExecutionController {
   }
 
   /**
+   * Filter error stack to remove sensitive server information
+   * @param {Error} error - The error object with stack trace
+   * @returns {string} - Filtered stack trace
+   */
+  filterErrorStack(error) {
+    if (!error.stack) return 'Error: No stack trace available';
+
+    return error.stack
+      .split('\n')
+      .map((line, index) => {
+        // Keep the error message (first line) intact
+        if (index === 0) {
+          return line;
+        }
+
+        // Filter and clean stack trace lines
+        if (line.includes('execution.js') || line.includes('/node_modules/')) {
+          // Remove server paths before execution.js
+          if (line.includes('execution.js')) {
+            const execMatch = line.match(/(.+)\/execution\.js/);
+            if (execMatch) {
+              return line.replace(execMatch[1] + '/', '');
+            }
+          }
+
+          // Remove server paths before node_modules
+          if (line.includes('/node_modules/')) {
+            const nodeModulesMatch = line.match(/(.+)(\/node_modules\/)/);
+            if (nodeModulesMatch) {
+              return line.replace(nodeModulesMatch[1], '');
+            }
+          }
+        }
+
+        // For lines that don't match our criteria, only include if they seem to be code
+        if (
+          line.includes('wrapper.js') ||
+          line.toLowerCase().includes('eval')
+        ) {
+          return '    at [code]';
+        }
+
+        return null;
+      })
+      .filter(Boolean)
+      .join('\n');
+  }
+
+  /**
    * Handle code execution requests
    */
   async executeCode(req, res) {
@@ -173,15 +222,15 @@ class ExecutionController {
       }
 
       // Clean up the execution directory
-      await this.executionService.cleanupExecutionDir(executionDir);
+      // await this.executionService.cleanupExecutionDir(executionDir);
 
       return res.json(result);
     } catch (error) {
-      console.error('Error processing request:', error);
+      console.error('Error: ' + error.stack);
 
       // Clean up the execution directory if it was created
       if (executionDir) {
-        await this.executionService.cleanupExecutionDir(executionDir);
+        // await this.executionService.cleanupExecutionDir(executionDir);
       }
 
       // Calculate total response time for error case
@@ -202,9 +251,12 @@ class ExecutionController {
         }
       }
 
-      return res.status(500).json({
+      const filteredStack = this.filterErrorStack(error);
+
+      return res.status(200).json({
         success: false,
-        error: error.message || 'Internal server error',
+        error: error.error || 'Internal server error',
+        stack: filteredStack,
         ...(options.debug && !error.debug ? { debug: debugInfo } : {}),
       });
     }

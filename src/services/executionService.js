@@ -210,7 +210,7 @@ class ExecutionService {
             }
           }
 
-          if (code !== 0) {
+          if (code !== 0 || stderr) {
             console.error(`Execution failed with code ${code}`);
             try {
               // Try to parse the error from stderr
