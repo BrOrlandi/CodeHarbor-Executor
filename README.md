@@ -236,3 +236,5 @@ If authentication fails, the server will return a 401 Unauthorized response.
 - [ ] Prevent installing dependencies in commented code
 - [ ] Add support for file uploads and binary data handling
 - [ ] Serve execution generated files for download
+- [ ] Online dashboard for monitoring and managing executions
+- [ ] Online code editor for writing and testing functions
