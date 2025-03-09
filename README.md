@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="./images/readme_logo.png" alt="CodeHarbor-Executor Logo" width="100%">
+</div>
+
 # CodeHarbor-Executor
 
 A Node.js service that provides secure code execution for JavaScript functions with dependency management and caching.
