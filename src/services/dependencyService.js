@@ -173,30 +173,45 @@ class DependencyService {
           .catch(() => false);
 
         if (cacheExists) {
-          console.log(`Using cached dependencies for key: ${cacheKey}`);
-          // Create symlink from cache to execution directory
-          try {
-            await fs.symlink(cacheModulesPath, targetNodeModules);
-            // Get the actual versions from the cache
-            actualDependencies = await this.getInstalledVersions(
-              codeDir,
-              dependencies
+          // Check if all required dependencies exist in the cache
+          const missingDependencies = await this.checkForMissingDependencies(
+            cacheModulesPath,
+            dependencies
+          );
+
+          if (missingDependencies.length === 0) {
+            console.log(`Using cached dependencies for key: ${cacheKey}`);
+            // Create symlink from cache to execution directory
+            try {
+              await fs.symlink(cacheModulesPath, targetNodeModules);
+              // Get the actual versions from the cache
+              actualDependencies = await this.getInstalledVersions(
+                codeDir,
+                dependencies
+              );
+              return { success: true, dependencies: actualDependencies };
+            } catch (error) {
+              console.error(
+                'Error creating symlink, falling back to copy:',
+                error
+              );
+              // If symlink fails (e.g., on some Windows setups), try copying
+              await fs.cp(cacheModulesPath, targetNodeModules, {
+                recursive: true,
+              });
+              actualDependencies = await this.getInstalledVersions(
+                codeDir,
+                dependencies
+              );
+              return { success: true, dependencies: actualDependencies };
+            }
+          } else {
+            console.log(
+              `Cache exists but missing dependencies: ${missingDependencies.join(
+                ', '
+              )}. Updating cache...`
             );
-            return { success: true, dependencies: actualDependencies };
-          } catch (error) {
-            console.error(
-              'Error creating symlink, falling back to copy:',
-              error
-            );
-            // If symlink fails (e.g., on some Windows setups), try copying
-            await fs.cp(cacheModulesPath, targetNodeModules, {
-              recursive: true,
-            });
-            actualDependencies = await this.getInstalledVersions(
-              codeDir,
-              dependencies
-            );
-            return { success: true, dependencies: actualDependencies };
+            // Continue to installation process to update the cache
           }
         }
       } else {
@@ -280,6 +295,28 @@ class DependencyService {
       console.error('Error in dependency installation:', error);
       throw error;
     }
+  }
+
+  /**
+   * Check which required dependencies are missing from the cache
+   */
+  async checkForMissingDependencies(cacheModulesPath, dependencies) {
+    const missingDependencies = [];
+
+    for (const pkg of Object.keys(dependencies)) {
+      try {
+        // Check if the package directory exists in the cache
+        await fs.access(path.join(cacheModulesPath, pkg));
+
+        // Additionally verify package.json exists to ensure it's a valid module
+        await fs.access(path.join(cacheModulesPath, pkg, 'package.json'));
+      } catch (error) {
+        // If access fails, the dependency is missing
+        missingDependencies.push(pkg);
+      }
+    }
+
+    return missingDependencies;
   }
 }
 

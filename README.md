@@ -229,6 +229,7 @@ If authentication fails, the server will return a 401 Unauthorized response.
 - **Console Capture**: All console output (log, info, warn, error, debug) is captured and returned in the response
 - **Execution Timeout**: Prevent infinite loops and long-running processes
 - **Caching**: Reuse installed dependencies to improve performance
+  - **Smart Cache Verification**: Automatically detects when new dependencies are required and updates the cache accordingly
 - **Debug Information**: Optional detailed execution statistics and environment information
 
 # ToDos
