@@ -25,6 +25,8 @@ const CACHE_DIR = process.env.CACHE_DIR || './dependencies-cache';
 const SECRET_KEY = process.env.SECRET_KEY || '';
 const DEFAULT_TIMEOUT = parseInt(process.env.DEFAULT_TIMEOUT || '60000', 10); // 60 seconds default
 const CACHE_SIZE_LIMIT = parseFileSize(process.env.CACHE_SIZE_LIMIT || '1GB');
+const MAX_EXECUTION_DIRS =
+  parseInt(process.env.EXECUTIONS_DATA_PRUNE_MAX_COUNT, 10) || 100;
 
 // Initialize express app
 const app = express();
@@ -48,7 +50,11 @@ app.use(authMiddleware);
 // Initialize services
 const cacheService = new CacheService(CACHE_DIR, CACHE_SIZE_LIMIT);
 const dependencyService = new DependencyService(cacheService);
-const executionService = new ExecutionService(EXECUTION_DIR, DEFAULT_TIMEOUT);
+const executionService = new ExecutionService(
+  EXECUTION_DIR,
+  DEFAULT_TIMEOUT,
+  MAX_EXECUTION_DIRS
+);
 
 // Initialize controller
 const executionController = new ExecutionController(
@@ -76,6 +82,7 @@ async function start() {
       console.log(`Default execution timeout: ${DEFAULT_TIMEOUT}ms`);
       console.log(`Authentication: ${SECRET_KEY ? 'enabled' : 'disabled'}`);
       console.log(`Cache size limit: ${formatFileSize(CACHE_SIZE_LIMIT)}`);
+      console.log(`Maximum execution directories: ${MAX_EXECUTION_DIRS}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

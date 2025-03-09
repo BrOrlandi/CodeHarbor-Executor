@@ -4,9 +4,14 @@ const { spawn } = require('child_process');
 const { performance } = require('perf_hooks');
 
 class ExecutionService {
-  constructor(executionDir, defaultTimeout) {
+  constructor(executionDir, defaultTimeout, maxExecutionDirs) {
     this.executionDir = executionDir;
     this.defaultTimeout = defaultTimeout;
+    // Use the passed maxExecutionDirs parameter, falling back to environment variable if not provided
+    this.maxExecutionDirs =
+      maxExecutionDirs ||
+      parseInt(process.env.EXECUTIONS_DATA_PRUNE_MAX_COUNT, 10) ||
+      100;
   }
 
   /**
@@ -18,7 +23,81 @@ class ExecutionService {
       .substring(2, 7)}`;
     const executionDir = path.join(this.executionDir, executionId);
     await fs.mkdir(executionDir, { recursive: true });
+
+    // After creating a new execution directory, prune old ones if needed
+    await this.pruneOldExecutionDirs();
+
     return executionDir;
+  }
+
+  /**
+   * Get all execution directories sorted by creation date (oldest first)
+   */
+  async getExecutionDirs() {
+    try {
+      // Ensure the execution directory exists
+      await fs.mkdir(this.executionDir, { recursive: true });
+
+      // Get all entries in the execution directory
+      const entries = await fs.readdir(this.executionDir, {
+        withFileTypes: true,
+      });
+
+      // Filter for directories and that start with "exec-"
+      const executionDirs = entries
+        .filter(
+          (entry) => entry.isDirectory() && entry.name.startsWith('exec-')
+        )
+        .map((dir) => ({
+          name: dir.name,
+          path: path.join(this.executionDir, dir.name),
+          // Extract timestamp from directory name (assuming format exec-{timestamp}-{random})
+          timestamp: parseInt(dir.name.split('-')[1], 10) || 0,
+        }));
+
+      // Sort by timestamp (oldest first)
+      return executionDirs.sort((a, b) => a.timestamp - b.timestamp);
+    } catch (error) {
+      console.error('Error getting execution directories:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Prune old execution directories if they exceed the maximum count
+   */
+  async pruneOldExecutionDirs() {
+    if (this.maxExecutionDirs <= 0) {
+      // If maxExecutionDirs is 0 or negative, don't prune anything
+      return;
+    }
+
+    try {
+      // Get all execution directories sorted by timestamp (oldest first)
+      const executionDirs = await this.getExecutionDirs();
+
+      // If the number of dirs exceeds the maximum, delete the oldest ones
+      if (executionDirs.length > this.maxExecutionDirs) {
+        const dirsToDelete = executionDirs.slice(
+          0,
+          executionDirs.length - this.maxExecutionDirs
+        );
+
+        for (const dir of dirsToDelete) {
+          try {
+            await fs.rm(dir.path, { recursive: true, force: true });
+            console.log(`Pruned old execution directory: ${dir.path}`);
+          } catch (error) {
+            console.error(
+              `Failed to delete old execution directory ${dir.path}:`,
+              error
+            );
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error pruning old execution directories:', error);
+    }
   }
 
   /**
@@ -292,6 +371,13 @@ class ExecutionService {
    * Clean up the execution directory
    */
   async cleanupExecutionDir(executionDir) {
+    // If EXECUTIONS_DATA_PRUNE_MAX_COUNT is set to a positive number,
+    // we keep the directories and manage them with pruneOldExecutionDirs
+    if (this.maxExecutionDirs > 0) {
+      // Don't delete the directory, it will be managed by the pruning process
+      return;
+    }
+
     try {
       await fs.rm(executionDir, { recursive: true, force: true });
     } catch (cleanupError) {

@@ -222,7 +222,7 @@ class ExecutionController {
       }
 
       // Clean up the execution directory
-      // await this.executionService.cleanupExecutionDir(executionDir);
+      await this.executionService.cleanupExecutionDir(executionDir);
 
       return res.json(result);
     } catch (error) {
@@ -230,7 +230,7 @@ class ExecutionController {
 
       // Clean up the execution directory if it was created
       if (executionDir) {
-        // await this.executionService.cleanupExecutionDir(executionDir);
+        await this.executionService.cleanupExecutionDir(executionDir);
       }
 
       // Calculate total response time for error case
