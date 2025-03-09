@@ -1,5 +1,6 @@
 executions/
 dependencies-cache/
+bruno-rest-client/environments/
 
 # Dependency directories
 node_modules/
