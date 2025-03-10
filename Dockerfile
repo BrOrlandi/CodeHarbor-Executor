@@ -11,6 +11,16 @@ RUN apt-get update \
 	fonts-kacst \
 	fonts-freefont-ttf \
 	libxss1 \
+	build-essential \
+	libcairo2-dev \
+	libpango1.0-dev \
+	libjpeg-dev \
+	libgif-dev \
+	librsvg2-dev \
+	# Add additional dependencies for canvas
+	pkg-config \
+	python3 \
+	libpixman-1-dev \
 	--no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
 
@@ -23,9 +33,11 @@ RUN groupadd -r codeharbor && \
 # Set up application directory
 WORKDIR /home/codeharbor/app
 
-# Set default values for environment variables
+# Set environment variables
 ENV EXECUTION_DIR='/home/codeharbor/app/executions'
 ENV CACHE_DIR='/home/codeharbor/app/dependencies-cache'
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV npm_config_build_from_source=true
 
 # Install dependencies
 COPY package*.json ./
@@ -36,7 +48,7 @@ COPY . .
 
 # Create directories based on environment variables
 RUN mkdir -p ${EXECUTION_DIR} ${CACHE_DIR} && \
-	chown -R codeharbor:codeharbor ${EXECUTION_DIR} ${CACHE_DIR} /home/codeharbor/app
+	chown -R codeharbor:codeharbor /home/codeharbor/app
 
 # Adjust ownership of the app directory
 RUN chown -R codeharbor:codeharbor /home/codeharbor/app
