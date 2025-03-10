@@ -24,8 +24,8 @@ RUN groupadd -r codeharbor && \
 WORKDIR /home/codeharbor/app
 
 # Set default values for environment variables
-ENV EXECUTION_DIR='./executions'
-ENV CACHE_DIR='./dependencies-cache'
+ENV EXECUTION_DIR='/home/codeharbor/app/executions'
+ENV CACHE_DIR='/home/codeharbor/app/dependencies-cache'
 
 # Install dependencies
 COPY package*.json ./
