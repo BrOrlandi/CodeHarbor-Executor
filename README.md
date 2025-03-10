@@ -6,6 +6,8 @@
 
 A Node.js service that provides secure code execution for JavaScript functions with dependency management and caching.
 
+> Run code in n8n with NPM dependencies
+
 ## Installation
 
 ```bash
