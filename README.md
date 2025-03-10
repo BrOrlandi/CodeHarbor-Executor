@@ -218,6 +218,47 @@ If authentication fails, the server will return a 401 Unauthorized response.
 - Native Node.js modules detection to prevent unnecessary installations
 - Console output is captured and returned as structured data to prevent interference with the execution process
 
+## Using Puppeteer
+
+When using Puppeteer in your code, always configure the launch method with the following parameters to ensure proper execution in the CodeHarbor environment:
+
+```javascript
+const browser = await puppeteer.launch({
+  executablePath: '/usr/bin/chromium',
+  args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  headless: true,
+});
+```
+
+Example function using Puppeteer:
+
+```javascript
+const puppeteer = require('puppeteer');
+
+module.exports = async function (urls) {
+  const browser = await puppeteer.launch({
+    executablePath: '/usr/bin/chromium',
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    headless: true,
+  });
+
+  try {
+    const page = await browser.newPage();
+    const results = [];
+
+    for (const url of urls) {
+      await page.goto(url, { waitUntil: 'networkidle2' });
+      const title = await page.title();
+      results.push({ url, title });
+    }
+
+    return results;
+  } finally {
+    await browser.close();
+  }
+};
+```
+
 ## Features
 
 - **Code Execution**: Run JavaScript code with dependencies in a secure environment
