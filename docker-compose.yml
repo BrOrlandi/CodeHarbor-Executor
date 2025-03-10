@@ -4,16 +4,15 @@ services:
     container_name: codeharbor-executor
     restart: unless-stopped
     volumes:
-      - codeharbor_cache:/app/cache
+      - codeharbor_cache:/home/codeharbor/app/cache
+      - codeharbor_executions:/home/codeharbor/app/executions
     environment:
       - PORT=3000
-      - EXECUTION_DIR=/tmp/codeharbor
-      - CACHE_DIR=/app/cache
       - NODE_ENV=production
       - EXECUTIONS_DATA_PRUNE_MAX_COUNT=100
-      - DEFAULT_TIMEOUT=${CODEHARBOR_TIMEOUT:-60000}   # Default timeout in milliseconds
-      - CACHE_SIZE_LIMIT=${CODEHARBOR_CACHE_SIZE:-1GB} # Max cache size with human-readable values
-      # Add any other environment variables you need here
+      - DEFAULT_TIMEOUT=60000 # Default timeout in milliseconds
+      - CACHE_SIZE_LIMIT=1GB # Max cache size with human-readable values
+      - SECRET_KEY=SecretApiToken  # Secret key for authentication
     networks:
       - traefik
     labels:
@@ -29,3 +28,4 @@ networks:
 
 volumes:
   codeharbor_cache:
+  codeharbor_executions:

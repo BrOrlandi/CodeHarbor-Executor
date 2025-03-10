@@ -20,8 +20,8 @@ const setupRoutes = require('./src/routes');
 
 // Environment variables
 const PORT = process.env.PORT || 3000;
-const EXECUTION_DIR = process.env.EXECUTION_DIR || './executions';
-const CACHE_DIR = process.env.CACHE_DIR || './dependencies-cache';
+const EXECUTION_DIR = './executions';
+const CACHE_DIR = './dependencies-cache';
 const SECRET_KEY = process.env.SECRET_KEY || '';
 const DEFAULT_TIMEOUT = parseInt(process.env.DEFAULT_TIMEOUT || '60000', 10); // 60 seconds default
 const CACHE_SIZE_LIMIT = parseFileSize(process.env.CACHE_SIZE_LIMIT || '1GB');

@@ -31,8 +31,6 @@ The service uses dotenv for environment configuration. Create a `.env` file in t
 
 ```
 PORT=3000
-EXECUTION_DIR=./executions
-CACHE_DIR=./dependencies-cache
 SECRET_KEY=your-secret-key-here
 DEFAULT_TIMEOUT=60000
 CACHE_SIZE_LIMIT=1GB
@@ -41,8 +39,6 @@ CACHE_SIZE_LIMIT=1GB
 The following environment variables can be used to configure the service:
 
 - `PORT`: The port on which the service will run (default: 3000)
-- `EXECUTION_DIR`: Directory for temporary code execution files (default: './executions')
-- `CACHE_DIR`: Directory for cached dependencies (default: './dependencies-cache')
 - `SECRET_KEY`: Authentication token for API calls (default: none)
 - `DEFAULT_TIMEOUT`: Default execution timeout in milliseconds (default: 60000)
 - `CACHE_SIZE_LIMIT`: Maximum cache directory size with support for human-readable values like "500MB", "1GB", etc. (default: "1GB")
@@ -235,7 +231,6 @@ If authentication fails, the server will return a 401 Unauthorized response.
 # ToDos
 
 - [ ] Prevent installing dependencies in commented code
-- [ ] Add support for file uploads and binary data handling
-- [ ] Serve execution generated files for download
+- [x] Add support for file uploads and binary data handling
 - [ ] Online dashboard for monitoring and managing executions
 - [ ] Online code editor for writing and testing functions
