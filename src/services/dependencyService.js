@@ -54,15 +54,19 @@ class DependencyService {
     const dependencies = {};
 
     // Match both require statements and import statements
-    const requireRegex = /require\s*\(\s*['"]([^@\s'"]+)(?:@[^'"]+)?['"]\s*\)/g;
+    // Updated regex to handle scoped packages (starting with @)
+    const requireRegex = /require\s*\(\s*['"](@?[^'"]+)['"]\s*\)/g;
     const importRegex =
-      /import\s+(?:(?:\{[^}]*\}|\*\s+as\s+[^\s]+|[^\s,{}]+)(?:\s*,\s*(?:\{[^}]*\}|\*\s+as\s+[^\s]+|[^\s,{}]+))*\s+from\s+)?['"]([^@\s'"]+)(?:@[^'"]+)?['"]/g;
+      /import\s+(?:(?:\{[^}]*\}|\*\s+as\s+[^\s]+|[^\s,{}]+)(?:\s*,\s*(?:\{[^}]*\}|\*\s+as\s+[^\s]+|[^\s,{}]+))*\s+from\s+)?['"](@?[^'"]+)['"]/g;
 
     let match;
 
     // Extract from require statements
     while ((match = requireRegex.exec(code)) !== null) {
-      const packageName = match[1];
+      const fullPackageName = match[1];
+      // Extract base package name (without version specifier)
+      const packageName = this.extractBasePackageName(fullPackageName);
+
       // Exclude native Node.js modules
       if (!this.isNativeModule(packageName)) {
         dependencies[packageName] = 'latest';
@@ -71,7 +75,10 @@ class DependencyService {
 
     // Extract from import statements
     while ((match = importRegex.exec(code)) !== null) {
-      const packageName = match[2];
+      const fullPackageName = match[2];
+      // Extract base package name (without version specifier)
+      const packageName = this.extractBasePackageName(fullPackageName);
+
       // Exclude native Node.js modules
       if (!this.isNativeModule(packageName)) {
         dependencies[packageName] = 'latest';
@@ -79,6 +86,23 @@ class DependencyService {
     }
 
     return dependencies;
+  }
+
+  /**
+   * Extract the base package name without version specifier
+   */
+  extractBasePackageName(fullName) {
+    // Handle scoped packages correctly
+    if (fullName.startsWith('@')) {
+      // For scoped packages, we need to include the scope and package name
+      // Format is @scope/package[@version]
+      const scopedMatch = fullName.match(/(@[^/]+\/[^@]+)(?:@.+)?/);
+      return scopedMatch ? scopedMatch[1] : fullName;
+    }
+
+    // For regular packages, just remove version specifier
+    const match = fullName.match(/([^@\s'"]+)(?:@.+)?/);
+    return match ? match[1] : fullName;
   }
 
   /**
