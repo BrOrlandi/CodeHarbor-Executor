@@ -500,6 +500,28 @@ This integration allows you to execute custom JavaScript code with any NPM depen
 
 Follow the installation instructions on the [n8n-nodes-codeharbor](https://github.com/BrOrlandi/n8n-nodes-codeharbor) repository to integrate CodeHarbor with your n8n instance.
 
+## CodeHarbor GPT Agent
+
+To make it even easier to generate code for your CodeHarbor node, a specialized GPT Agent is available in ChatGPT:
+
+<div align="center">
+  <a href="https://chatgpt.com/g/g-67cfc39e08b0819188a8101656455aad-codeharbor-code-generator">
+    <img src="https://img.shields.io/badge/ChatGPT-CodeHarbor_Generator-74aa9c?style=for-the-badge&logo=openai&logoColor=white" alt="CodeHarbor GPT Agent">
+  </a>
+</div>
+
+This custom GPT is designed specifically to help you:
+
+- Generate JavaScript code for your CodeHarbor node
+- Handle complex data transformations
+- Process binary data correctly
+- Implement optimized solutions for n8n workflows
+- Format code according to CodeHarbor's best practices
+
+Simply describe what you want to achieve in your workflow, and the agent will generate ready-to-use code tailored for CodeHarbor.
+
+[Access the CodeHarbor Code Generator](https://chatgpt.com/g/g-67cfc39e08b0819188a8101656455aad-codeharbor-code-generator)
+
 # ToDos
 
 - [ ] Prevent installing dependencies in commented code
