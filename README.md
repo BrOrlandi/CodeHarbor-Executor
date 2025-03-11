@@ -482,6 +482,24 @@ module.exports = async function (urls) {
   - **Smart Cache Verification**: Automatically detects when new dependencies are required and updates the cache accordingly
 - **Debug Information**: Optional detailed execution statistics and environment information
 
+## Using with n8n
+
+For n8n users, we recommend using the dedicated [n8n-nodes-codeharbor](https://github.com/BrOrlandi/n8n-nodes-codeharbor) custom node. This node provides a seamless integration between n8n workflows and the CodeHarbor-Executor service.
+
+### How it works
+
+1. Add the CodeHarbor node to your n8n workflow
+2. Configure the node with your JavaScript code and options
+3. The node sends your code and workflow data to the CodeHarbor-Executor service via its REST API
+4. CodeHarbor executes the code in a secure environment with the requested NPM dependencies
+5. The results are returned to the n8n node, which outputs them to the next node in your workflow
+
+This integration allows you to execute custom JavaScript code with any NPM dependencies directly in your n8n workflows without installing packages on your n8n server.
+
+### Installation Instructions
+
+Follow the installation instructions on the [n8n-nodes-codeharbor](https://github.com/BrOrlandi/n8n-nodes-codeharbor) repository to integrate CodeHarbor with your n8n instance.
+
 # ToDos
 
 - [ ] Prevent installing dependencies in commented code
