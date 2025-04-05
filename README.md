@@ -10,6 +10,61 @@ A Node.js service that provides secure code execution for JavaScript functions w
 
 ## Installation
 
+This section provides instructions for setting up and running CodeHarbor-Executor.
+
+### Running in Production (Recommended)
+
+The easiest way to run CodeHarbor-Executor in production is using the official Docker image available on Docker Hub.
+
+```bash
+# Pull the latest image
+docker pull brorlandi/codeharbor-executor:latest
+
+# Run the container
+docker run -d \
+  --name codeharbor-executor \
+  -p 3000:3000 \
+  -e SECRET_KEY="your-super-secret-key" \
+  -e DEFAULT_TIMEOUT=60000 \
+  -e CACHE_SIZE_LIMIT="1GB" \
+  -v codeharbor_cache:/app/cache \
+  --restart unless-stopped \
+  brorlandi/codeharbor-executor:latest
+```
+
+**Explanation:**
+
+- `-d`: Run the container in detached mode (in the background).
+- `--name codeharbor-executor`: Assign a name to the container.
+- `-p 3000:3000`: Map port 3000 on the host to port 3000 in the container.
+- `-e SECRET_KEY=...`: **Required:** Set a secure secret key for authentication.
+- `-e DEFAULT_TIMEOUT=...`: (Optional) Set the default execution timeout in milliseconds.
+- `-e CACHE_SIZE_LIMIT=...`: (Optional) Set the maximum cache size (e.g., "500MB", "2GB").
+- `-v codeharbor_cache:/app/cache`: **Recommended:** Mount a Docker volume to persist the dependency cache outside the container. This improves performance and avoids re-downloading dependencies when the container restarts.
+- `--restart unless-stopped`: Automatically restart the container unless manually stopped.
+
+Adjust the environment variables (`-e`) as needed based on the [Configuration](#configuration) section.
+
+#### Using Docker Compose
+
+Alternatively, you can use the provided `docker-compose.yml` file to manage the service configuration and deployment more easily:
+
+1.  **Create an environment file:** Copy the `.env.example` to `.env` and configure your `SECRET_KEY` and other settings within the `.env` file.
+    ```bash
+    cp .env.example .env
+    # Edit .env file with your settings
+    ```
+2.  **Run Docker Compose:**
+    ```bash
+    docker-compose up -d
+    ```
+
+This command will build (if necessary) and start the service based on the settings in `docker-compose.yml` and your `.env` file. The `docker-compose.yml` file already includes the recommended volume mount for the cache.
+
+### Development Setup
+
+If you want to contribute to the project or run it locally for testing purposes, follow these steps:
+
 ```bash
 # Clone the repository
 git clone https://github.com/your-username/CodeHarbor-Executor.git
@@ -20,7 +75,8 @@ cd CodeHarbor-Executor
 # Install dependencies
 npm install
 
-# Create a .env file (optional)
+# Create a .env file (optional, copy from example)
+# Edit this file to set your configuration variables (see Configuration section)
 cp .env.example .env
 
 # Start the server
@@ -29,9 +85,10 @@ npm start
 
 ## Configuration
 
-The service uses dotenv for environment configuration. Create a `.env` file in the root directory with the following variables:
+The service uses environment variables for configuration. When running with Docker, pass these using the `-e` flag. When running locally for development, you can create a `.env` file in the root directory.
 
-```
+```dotenv
+# .env file content example
 PORT=3000
 SECRET_KEY=your-secret-key-here
 DEFAULT_TIMEOUT=60000
