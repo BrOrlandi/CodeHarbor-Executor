@@ -1,6 +1,6 @@
 services:
   codeharbor-executor:
-    image: brorlandi/codeharbor-executor:latest
+    build: .
     container_name: codeharbor-executor
     restart: unless-stopped
     volumes:
@@ -13,8 +13,6 @@ services:
       - DEFAULT_TIMEOUT=60000 # Default timeout in milliseconds
       - CACHE_SIZE_LIMIT=1GB # Max cache size with human-readable values
       - SECRET_KEY=SecretApiToken # Secret key for authentication
-    ports:
-      - 3000:3000
 
 volumes:
   codeharbor_cache:

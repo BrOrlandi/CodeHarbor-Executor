@@ -1,0 +1,26 @@
+# Git version control
+.git
+.gitignore
+
+# Node.js dependencies
+node_modules
+
+# Environment variables
+.env
+
+# Docker files
+Dockerfile
+Dockerfile_old_noPuppeteer
+docker-compose.yml
+docker-compose.development.yml
+.dockerignore
+
+# OS specific files
+.DS_Store
+
+# Editor specific files
+bruno-rest-client/
+
+
+# Readme Images
+images/
