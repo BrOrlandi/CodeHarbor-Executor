@@ -1,6 +1,6 @@
 {
   "name": "codeharbor-executor",
-  "version": "1.0.0",
+  "version": "0.1.3",
   "description": "Node.js code execution service for CodeHarbor n8n node",
   "main": "index.js",
   "scripts": {
