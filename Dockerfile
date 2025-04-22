@@ -1,5 +1,5 @@
 # CodeHarbor Executor Dockerfile
-FROM node:20-slim
+FROM node:22-slim
 
 # Install Chromium and its dependencies
 RUN apt-get update \
@@ -39,9 +39,15 @@ ENV CACHE_DIR='/home/codeharbor/app/dependencies-cache'
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV npm_config_build_from_source=true
 
+# Install and enable pnpm
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+RUN corepack prepare pnpm@9.15.4 --activate
+
 # Install dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN pnpm install --no-frozen-lockfile
 
 # Copy app source
 COPY . .
