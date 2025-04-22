@@ -52,11 +52,8 @@ RUN pnpm install --no-frozen-lockfile
 # Copy app source
 COPY . .
 
-# Configure pnpm to use the cache directory for its store
-RUN pnpm config set store-dir ${CACHE_DIR}/pnpm-store
-
 # Create directories based on environment variables
-RUN mkdir -p ${EXECUTION_DIR} ${CACHE_DIR}/pnpm-store && \
+RUN mkdir -p ${EXECUTION_DIR} ${CACHE_DIR} && \
 	chown -R codeharbor:codeharbor /home/codeharbor/app
 
 # Adjust ownership of the app directory

@@ -147,39 +147,6 @@ class DependencyService {
   }
 
   /**
-   * Configure pnpm store directory
-   */
-  async configurePnpmStore(codeDir, cachePath) {
-    // Configure pnpm to use a store directory within the cache path
-    const storeDir = path.join(cachePath, 'pnpm-store');
-
-    try {
-      // Create the store directory if it doesn't exist
-      await fs.mkdir(storeDir, { recursive: true });
-
-      // Configure pnpm to use this store
-      return new Promise((resolve, reject) => {
-        exec(
-          `pnpm config set store-dir "${storeDir}"`,
-          { cwd: codeDir },
-          (error, stdout, stderr) => {
-            if (error) {
-              console.error(`pnpm config error: ${error.message}`);
-              console.error(`stderr: ${stderr}`);
-              return reject(error);
-            }
-            console.log(`Configured pnpm store at: ${storeDir}`);
-            resolve();
-          }
-        );
-      });
-    } catch (error) {
-      console.error('Error configuring pnpm store:', error);
-      throw error;
-    }
-  }
-
-  /**
    * Install dependencies
    */
   async installDependencies(
@@ -265,9 +232,6 @@ class DependencyService {
         path.join(codeDir, 'package.json'),
         JSON.stringify(packageJson, null, 2)
       );
-
-      // Configure pnpm to use a consistent store directory
-      await this.configurePnpmStore(codeDir, cachePath);
 
       // Install dependencies
       console.log('Installing dependencies:', dependencies);
