@@ -43,7 +43,7 @@ ENV npm_config_build_from_source=true
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 RUN corepack enable
-RUN corepack prepare pnpm@latest --activate
+RUN corepack prepare pnpm@9.15.4 --activate
 
 # Install dependencies
 COPY package*.json ./
