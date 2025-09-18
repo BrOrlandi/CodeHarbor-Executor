@@ -80,7 +80,10 @@ class ExecutionController {
    * Handle code execution requests
    */
   async executeCode(req, res) {
-    const { code, items = [], cacheKey, options = {} } = req.body;
+    const { code, items = [], cacheKey: userCacheKey, options = {} } = req.body;
+
+    // Use global cache key if none provided
+    const cacheKey = userCacheKey || '__CodeHarborGlobalCache__';
 
     // Track start time to measure total response time
     const apiStartTime = performance.now();
@@ -94,6 +97,7 @@ class ExecutionController {
           cache: {
             usedCache: false,
             cacheKey: cacheKey,
+            isGlobalCache: !userCacheKey,
             currentCacheSize: 0,
             currentCacheSizeFormatted: '0 Bytes',
             totalCacheSize: 0,
@@ -112,21 +116,15 @@ class ExecutionController {
         .json({ success: false, error: 'Code is required' });
     }
 
-    if (!cacheKey) {
-      return res.status(400).json({
-        success: false,
-        error:
-          'Cache key is required (should be a hash of workflow ID and node name)',
-      });
-    }
-
     // Extract options
     const executionTimeout = options.timeout || undefined; // Will use default from service
     const forceUpdate = options.forceUpdate || false;
 
     // Log execution request
     console.log(
-      `Execution request: cacheKey=${cacheKey}, forceUpdate=${forceUpdate}, debug=${!!options.debug}`
+      `Execution request: cacheKey=${cacheKey}${
+        !userCacheKey ? ' (global)' : ''
+      }, forceUpdate=${forceUpdate}, debug=${!!options.debug}`
     );
 
     // Extract dependencies from the code

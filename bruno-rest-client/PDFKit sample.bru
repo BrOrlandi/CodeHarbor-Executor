@@ -16,9 +16,9 @@ auth:bearer {
 
 body:json {
   {
-    "code": "const puppeteer = require('puppeteer');\n\nmodule.exports = async function (items) {\n  // For each item, scrape some data from a web page\n  const browser = await puppeteer.launch();\n  const page = await browser.newPage();\n\n  // Example: navigate to example.com, take a screenshot\n  await page.goto('https://example.com');\n  const title = await page.title();\n\n  await browser.close();\n\n  // Return updated items with the scraped title\n  return items.map(item => ({\n    ...item,\n    json: {\n      ...item.json,\n      scrapedTitle: title\n    }\n  }));\n};",
+    "code": "const PDFDocument = require('pdfkit');\nconst fs = require('fs');\n\nmodule.exports = async function (items) {\n  // Generate a PDF in memory\n  const doc = new PDFDocument();\n  const chunks = [];\n  \n  doc.on('data', chunk => chunks.push(chunk));\n  doc.on('end', () => { /* PDF generation done */ });\n\n  doc.text('Hello from codeharbor!', {\n    align: 'center'\n  });\n\n  doc.end();\n\n  const pdfBuffer = await new Promise(resolve => {\n    doc.on('end', () => resolve(Buffer.concat(chunks)));\n  });\n\n  return items.map(item => ({\n    ...item,\n    binary: {\n      ...item.binary,\n      pdfFile: {\n        data: pdfBuffer.toString('base64'),\n        mimeType: 'application/pdf',\n        fileName: 'generated.pdf'\n      }\n    }\n  }));\n};",
     "items": [1],
-    "cacheKey": "bruno-rest-puppeteer",
+    "cacheKey": "bruno-rest-pdf",
     "options": {
       "forceUpdate": false,
       "debug": true

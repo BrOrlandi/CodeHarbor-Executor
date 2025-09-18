@@ -131,11 +131,15 @@ Authorization: Bearer YOUR_SECRET_KEY
 }
 ```
 
+> **Note:** The `cacheKey` field is optional. If omitted, a global cache will be used for all executions.
+
 **Parameters:**
 
 - `code` (required): JavaScript code that exports a function
 - `items`: Input data to pass to the function (default: [])
-- `cacheKey` (required): Unique identifier for dependency caching
+- `cacheKey` (optional): Unique identifier for dependency caching
+  - If not provided, a global cache will be used for all executions
+  - Using a specific cacheKey creates an isolated dependency cache, useful for resolving dependency conflicts
 - `options`:
   - `timeout`: Custom execution timeout in milliseconds
   - `forceUpdate`: Force fresh installation of dependencies
@@ -162,6 +166,7 @@ Authorization: Bearer YOUR_SECRET_KEY
     "cache": {
       "usedCache": true,
       "cacheKey": "workflow-123-node-456",
+      "isGlobalCache": false,
       "currentCacheSize": 5242880,
       "currentCacheSizeFormatted": "5 MB",
       "totalCacheSize": 52428800,
@@ -198,6 +203,21 @@ curl -X POST http://localhost:3000/execute \
   -d '{
     "code": "module.exports = function(items) { console.log(\"Processing items\"); return items.map(item => item * 2); }",
     "items": [1, 2, 3, 4, 5],
+    "options": {
+      "debug": true
+    }
+  }'
+```
+
+### Example with Specific Cache Key
+
+```bash
+curl -X POST http://localhost:3000/execute \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer your-secret-key-here" \
+  -d '{
+    "code": "module.exports = function(items) { console.log(\"Processing items\"); return items.map(item => item * 2); }",
+    "items": [1, 2, 3, 4, 5],
     "cacheKey": "workflow-123-node-456",
     "options": {
       "debug": true
@@ -213,8 +233,7 @@ curl -X POST http://localhost:3000/execute \
   -H "Authorization: Bearer your-secret-key-here" \
   -d '{
     "code": "const _ = require('\''lodash'\''); module.exports = function(items) { console.log(_.map(items, String)); return _.map(items, item => item * 2); }",
-    "items": [1, 2, 3, 4, 5],
-    "cacheKey": "workflow-123-node-456"
+    "items": [1, 2, 3, 4, 5]
   }'
 ```
 
@@ -536,6 +555,8 @@ module.exports = async function (urls) {
 - **Console Capture**: All console output (log, info, warn, error, debug) is captured and returned in the response
 - **Execution Timeout**: Prevent infinite loops and long-running processes
 - **Caching**: Reuse installed dependencies to improve performance
+  - **Global Caching**: By default, all executions share a global dependency cache for better performance
+  - **Isolated Caching**: Optionally use specific cache keys for isolated dependency installations
   - **Smart Cache Verification**: Automatically detects when new dependencies are required and updates the cache accordingly
 - **Debug Information**: Optional detailed execution statistics and environment information
 
