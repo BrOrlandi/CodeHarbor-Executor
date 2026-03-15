@@ -33,6 +33,16 @@ const routes = [
     component: () => import('@/views/CacheView.vue'),
   },
   {
+    path: '/guide',
+    name: 'guide',
+    component: () => import('@/views/DocsView.vue'),
+  },
+  {
+    path: '/examples',
+    name: 'examples',
+    component: () => import('@/views/ExamplesView.vue'),
+  },
+  {
     path: '/docs',
     name: 'docs',
     component: () => import('@/views/ApiDocsView.vue'),

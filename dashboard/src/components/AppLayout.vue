@@ -24,10 +24,18 @@
           <svg class="nav-svg" viewBox="0 0 20 20" fill="currentColor"><path d="M3 5a2 2 0 012-2h10a2 2 0 012 2v2a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm2-.5a.5.5 0 00-.5.5v2a.5.5 0 00.5.5h10a.5.5 0 00.5-.5V5a.5.5 0 00-.5-.5H5zM3 13a2 2 0 012-2h10a2 2 0 012 2v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2zm2-.5a.5.5 0 00-.5.5v2a.5.5 0 00.5.5h10a.5.5 0 00.5-.5v-2a.5.5 0 00-.5-.5H5z"/></svg>
           <span class="nav-text" v-show="!sidebarCollapsed">Cache</span>
         </router-link>
+        <router-link to="/guide" class="nav-link" active-class="active">
+          <svg class="nav-svg" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm2-.5a.5.5 0 00-.5.5v12a.5.5 0 00.5.5h10a.5.5 0 00.5-.5V7.5H12a.5.5 0 01-.5-.5V3.5H5zM13 4.2V6.5h2.3L13 4.2zM7 10h6v1.5H7V10zm0 3h4v1.5H7V13z"/></svg>
+          <span class="nav-text" v-show="!sidebarCollapsed">Docs</span>
+        </router-link>
         <router-link to="/docs" class="nav-link" active-class="active">
           <svg class="nav-svg" viewBox="0 0 20 20" fill="currentColor"><path d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2-.5a.5.5 0 00-.5.5v12a.5.5 0 00.5.5h8a.5.5 0 00.5-.5V4a.5.5 0 00-.5-.5H6zM7 7h6v1.5H7V7zm0 3h6v1.5H7V10zm0 3h4v1.5H7V13z"/></svg>
           <span class="nav-text" v-show="!sidebarCollapsed">API Docs</span>
         </router-link>
+        <a href="https://www.npmjs.com/package/n8n-nodes-codeharbor" target="_blank" rel="noopener" class="nav-link">
+          <svg class="nav-svg" viewBox="0 0 20 20" fill="currentColor"><path d="M2 2h16v16H2V2zm1.5 1.5v13h6.25V5.75h3.75v10.75H17.5V3.5H3.5z"/></svg>
+          <span class="nav-text" v-show="!sidebarCollapsed">n8n Node</span>
+        </a>
       </nav>
 
       <div class="sidebar-bottom">

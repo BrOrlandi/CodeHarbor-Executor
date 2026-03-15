@@ -17,6 +17,7 @@
     "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.26.0",
     "codemirror": "^6.0.1",
+    "marked": "^17.0.4",
     "vue": "^3.4.0",
     "vue-router": "^4.3.0"
   },
