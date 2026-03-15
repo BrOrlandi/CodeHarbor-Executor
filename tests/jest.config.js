@@ -1,15 +1,18 @@
+const path = require('path');
+const projectRoot = path.resolve(__dirname, '..');
+
 module.exports = {
-  rootDir: '..',
+  rootDir: projectRoot,
   testEnvironment: 'node',
   projects: [
     {
       displayName: 'unit',
-      testMatch: ['<rootDir>/tests/unit/**/*.test.js'],
+      testMatch: [`${projectRoot}/tests/unit/**/*.test.js`],
       testEnvironment: 'node',
     },
     {
       displayName: 'e2e',
-      testMatch: ['<rootDir>/tests/e2e/**/*.e2e.test.js'],
+      testMatch: [`${projectRoot}/tests/e2e/**/*.e2e.test.js`],
       testEnvironment: 'node',
       testTimeout: 60000,
     },
