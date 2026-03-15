@@ -270,5 +270,133 @@ describe('ExecutionController', () => {
       expect(responseBody.debug.cache).toHaveProperty('cacheKey', 'debug-key');
       expect(responseBody.debug.execution).toHaveProperty('totalResponseTimeMs');
     });
+
+    it('calculates total cache size from existing entries in debug mode', async () => {
+      mockCacheService.getCacheEntries.mockResolvedValue([
+        { key: 'entry-1', size: 5000 },
+        { key: 'entry-2', size: 3000 },
+      ]);
+      mockCacheService.getCacheEntryInfo.mockResolvedValue({ exists: true, size: 2048 });
+      mockExecutionService.executeCode.mockResolvedValue({
+        success: true,
+        data: [],
+        console: [],
+      });
+      mockDependencyService.installDependencies.mockResolvedValue({
+        success: true,
+        dependencies: { lodash: '4.17.21' },
+      });
+
+      const { req, res } = createMockReqRes({
+        code: 'module.exports = () => []',
+        cacheKey: 'debug-cache-key',
+        options: { debug: true },
+      });
+
+      await controller.executeCode(req, res);
+
+      const debug = res.json.mock.calls[0][0].debug;
+      expect(debug.cache.totalCacheSize).toBe(8000);
+      expect(debug.cache.totalCacheSizeFormatted).toBe('7.81 KB');
+      expect(debug.cache.currentCacheSize).toBe(2048);
+      expect(debug.cache.currentCacheSizeFormatted).toBe('2 KB');
+      expect(debug.cache.usedCache).toBe(true);
+      expect(debug.execution.installedDependencies).toEqual({ lodash: '4.17.21' });
+      expect(debug.execution.dependencyInstallTimeMs).toBeDefined();
+    });
+
+    it('sets usedCache to false when forceUpdate is true in debug mode', async () => {
+      mockCacheService.getCacheEntryInfo.mockResolvedValue({ exists: true, size: 512 });
+      mockExecutionService.executeCode.mockResolvedValue({
+        success: true,
+        data: [],
+        console: [],
+      });
+
+      const { req, res } = createMockReqRes({
+        code: 'module.exports = () => []',
+        cacheKey: 'force-key',
+        options: { debug: true, forceUpdate: true },
+      });
+
+      await controller.executeCode(req, res);
+
+      const debug = res.json.mock.calls[0][0].debug;
+      expect(debug.cache.usedCache).toBe(false);
+    });
+
+    it('merges debug info from execution result when it already has debug', async () => {
+      mockExecutionService.executeCode.mockResolvedValue({
+        success: true,
+        data: [],
+        console: [],
+        debug: { executionTimeMs: 42 },
+      });
+      mockCacheService.getCacheEntryInfo.mockResolvedValue({ exists: false, size: 0 });
+
+      const { req, res } = createMockReqRes({
+        code: 'module.exports = () => []',
+        cacheKey: 'merge-debug-key',
+        options: { debug: true },
+      });
+
+      await controller.executeCode(req, res);
+
+      const debug = res.json.mock.calls[0][0].debug;
+      // Should have merged: execution result debug + controller debug
+      expect(debug.server).toHaveProperty('nodeVersion');
+      expect(debug.cache).toHaveProperty('cacheKey', 'merge-debug-key');
+      expect(debug.execution).toHaveProperty('totalResponseTimeMs');
+    });
+
+    it('attaches debug info to error object when execution fails with debug on', async () => {
+      mockCacheService.getCacheEntries.mockResolvedValue([{ key: 'e', size: 100 }]);
+      mockCacheService.getCacheEntryInfo.mockResolvedValue({ exists: true, size: 100 });
+      const executionError = {
+        success: false,
+        error: 'runtime crash',
+        console: [],
+        stack: 'Error: runtime crash\n    at execution.js:1:1',
+      };
+      mockExecutionService.executeCode.mockRejectedValue(executionError);
+
+      const { req, res } = createMockReqRes({
+        code: 'module.exports = () => { throw new Error("crash") }',
+        cacheKey: 'err-debug-key',
+        options: { debug: true },
+      });
+
+      await controller.executeCode(req, res);
+
+      // Debug info is set on error.debug in catch block (line 250)
+      // After that, the spread condition !error.debug is false, so debug is NOT in response
+      // But error.debug itself was populated with totalResponseTimeMs
+      expect(executionError.debug).toBeDefined();
+      expect(executionError.debug.execution).toHaveProperty('totalResponseTimeMs');
+      expect(executionError.debug.server).toHaveProperty('nodeVersion');
+    });
+
+    it('merges debug info with error.debug when error already has debug', async () => {
+      const executionError = {
+        success: false,
+        error: 'fail',
+        console: [],
+        stack: 'Error: fail\n    at execution.js:1:1',
+        debug: { executionTimeMs: 55 },
+      };
+      mockExecutionService.executeCode.mockRejectedValue(executionError);
+
+      const { req, res } = createMockReqRes({
+        code: 'module.exports = () => {}',
+        cacheKey: 'err-merge-key',
+        options: { debug: true },
+      });
+
+      await controller.executeCode(req, res);
+
+      // error.debug is merged: original error debug + controller debug
+      expect(executionError.debug.server).toHaveProperty('nodeVersion');
+      expect(executionError.debug.execution).toHaveProperty('totalResponseTimeMs');
+    });
   });
 });
