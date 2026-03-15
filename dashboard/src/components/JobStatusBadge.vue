@@ -12,7 +12,7 @@ const props = defineProps({
   status: {
     type: String,
     required: true,
-    validator: (v) => ['pending', 'running', 'success', 'error', 'imported'].includes(v),
+    validator: (v) => ['pending', 'running', 'success', 'error', 'imported', 'interrupted'].includes(v),
   },
 });
 
@@ -53,6 +53,9 @@ const label = computed(() => props.status.charAt(0).toUpperCase() + props.status
 
 .imported { color: var(--imported); background: rgba(136, 153, 173, 0.1); }
 .imported .status-dot { background: var(--imported); }
+
+.interrupted { color: var(--warning); background: rgba(255, 159, 10, 0.1); }
+.interrupted .status-dot { background: var(--warning); }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; }

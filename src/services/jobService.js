@@ -96,6 +96,21 @@ class JobService {
   }
 
   /**
+   * Mark jobs left in 'running' or 'pending' status as 'interrupted'
+   * Called on startup to recover from crashes
+   */
+  recoverInterruptedJobs() {
+    const db = this.databaseService.getDb();
+    const result = db.prepare(
+      "UPDATE jobs SET status = 'interrupted', error_message = 'Execution interrupted by server restart', completed_at = datetime('now') WHERE status IN ('running', 'pending')"
+    ).run();
+    if (result.changes > 0) {
+      console.log(`Recovered ${result.changes} interrupted job(s)`);
+    }
+    return result.changes;
+  }
+
+  /**
    * Prune oldest jobs when count exceeds MAX_JOB_HISTORY
    */
   pruneOldJobs() {

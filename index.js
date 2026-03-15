@@ -151,6 +151,9 @@ async function start() {
     // Initialize database
     databaseService.initialize();
 
+    // Recover interrupted jobs from previous run
+    jobService.recoverInterruptedJobs();
+
     // Import legacy executions
     const migrationService = new MigrationService(databaseService, EXECUTION_DIR);
     migrationService.importLegacyExecutions();

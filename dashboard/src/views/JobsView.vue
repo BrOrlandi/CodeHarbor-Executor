@@ -13,6 +13,7 @@
           <option value="pending">Pending</option>
           <option value="running">Running</option>
           <option value="imported">Imported</option>
+          <option value="interrupted">Interrupted</option>
         </select>
         <input
           v-model="filters.search"
