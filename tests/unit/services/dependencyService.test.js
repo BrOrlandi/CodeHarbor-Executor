@@ -194,6 +194,85 @@ describe('DependencyService', () => {
       const linkTarget = await fs.readlink(path.join(codeDir, 'node_modules'));
       expect(linkTarget).toBe(cacheModules);
     });
+
+    it('runs pnpm install when cache has missing deps and caches the result', async () => {
+      // Create cache with only lodash, but we need lodash + is-odd
+      const cacheModules = path.join(cachePath, 'node_modules');
+      const lodashDir = path.join(cacheModules, 'is-number');
+      await fs.mkdir(lodashDir, { recursive: true });
+      await fs.writeFile(path.join(lodashDir, 'package.json'), JSON.stringify({ version: '7.0.0' }));
+
+      const result = await service.installDependencies(
+        { 'is-number': 'latest', 'is-odd': 'latest' },
+        codeDir,
+        'test-key',
+        cachePath,
+        false
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.dependencies['is-number']).toBeDefined();
+      expect(result.dependencies['is-odd']).toBeDefined();
+      expect(result.dependencies['is-number']).not.toBe('unknown');
+      expect(result.dependencies['is-odd']).not.toBe('unknown');
+
+      // Verify cache was updated with both packages
+      const cachedIsOdd = path.join(cachePath, 'node_modules', 'is-odd', 'package.json');
+      const cached = JSON.parse(await fs.readFile(cachedIsOdd, 'utf8'));
+      expect(cached.version).toBeDefined();
+
+      // Verify pinned versions were saved
+      const pinned = JSON.parse(await fs.readFile(path.join(cachePath, 'pinned-versions.json'), 'utf8'));
+      expect(pinned['is-odd']).toBeDefined();
+    }, 30000);
+
+    it('skips cache and runs pnpm install when forceUpdate is true', async () => {
+      // Pre-populate cache
+      const cacheModules = path.join(cachePath, 'node_modules');
+      await fs.mkdir(path.join(cacheModules, 'is-number'), { recursive: true });
+      await fs.writeFile(path.join(cacheModules, 'is-number', 'package.json'), JSON.stringify({ version: '7.0.0' }));
+
+      const result = await service.installDependencies(
+        { 'is-number': 'latest' },
+        codeDir,
+        'test-key',
+        cachePath,
+        true // forceUpdate
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.dependencies['is-number']).toBeDefined();
+      expect(result.dependencies['is-number']).not.toBe('unknown');
+
+      // Verify package.json was written with dependencies
+      const pkgJson = JSON.parse(await fs.readFile(path.join(codeDir, 'package.json'), 'utf8'));
+      expect(pkgJson.dependencies['is-number']).toBe('latest');
+    }, 30000);
+
+    it('applies pinned versions when strategy is pinned', async () => {
+      const pinnedService = new DependencyService(mockCacheService, 'pinned');
+
+      // Create pinned versions file with specific version
+      await fs.writeFile(
+        path.join(cachePath, 'pinned-versions.json'),
+        JSON.stringify({ 'is-number': '7.0.0' })
+      );
+
+      const result = await pinnedService.installDependencies(
+        { 'is-number': 'latest' },
+        codeDir,
+        'test-key',
+        cachePath,
+        false
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.dependencies['is-number']).toBe('7.0.0');
+
+      // Verify the package.json used the pinned version
+      const pkgJson = JSON.parse(await fs.readFile(path.join(codeDir, 'package.json'), 'utf8'));
+      expect(pkgJson.dependencies['is-number']).toBe('7.0.0');
+    }, 30000);
   });
 
   describe('readPinnedVersions / savePinnedVersions', () => {

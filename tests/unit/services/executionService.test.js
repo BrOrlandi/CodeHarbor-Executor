@@ -131,6 +131,33 @@ describe('ExecutionService', () => {
       });
     });
 
+    it('collects debug info when collectDebugInfo is true', async () => {
+      const execDir = await service.createExecutionDir();
+      const code = `module.exports = function(items) { return items; }`;
+
+      const result = await service.executeCode(code, [1, 2], execDir, 5000, true);
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual([1, 2]);
+      expect(result.debug).toBeDefined();
+      expect(result.debug).toHaveProperty('executionTimeMs');
+      expect(typeof result.debug.executionTimeMs).toBe('number');
+    });
+
+    it('includes debug info in error rejection when collectDebugInfo is true', async () => {
+      const execDir = await service.createExecutionDir();
+      const code = `module.exports = function() { throw new Error('debug error'); }`;
+
+      try {
+        await service.executeCode(code, [], execDir, 5000, true);
+        expect.unreachable('should have rejected');
+      } catch (err) {
+        expect(err.success).toBe(false);
+        expect(err.error).toContain('debug error');
+        expect(err.debug).toBeDefined();
+        expect(err.debug).toHaveProperty('executionTimeMs');
+      }
+    });
+
     it('rejects on timeout', async () => {
       const execDir = await service.createExecutionDir();
       const code = `module.exports = function() {
