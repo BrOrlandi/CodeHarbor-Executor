@@ -43,8 +43,9 @@ const nativeModules = [
 ];
 
 class DependencyService {
-  constructor(cacheService) {
+  constructor(cacheService, versionStrategy = 'update') {
     this.cacheService = cacheService;
+    this.versionStrategy = versionStrategy;
   }
 
   /**
@@ -75,7 +76,7 @@ class DependencyService {
 
     // Extract from import statements
     while ((match = importRegex.exec(code)) !== null) {
-      const fullPackageName = match[2];
+      const fullPackageName = match[1];
       // Extract base package name (without version specifier)
       const packageName = this.extractBasePackageName(fullPackageName);
 
@@ -221,6 +222,22 @@ class DependencyService {
         console.log('Force update enabled, ignoring cache');
       }
 
+      // Apply pinned versions if strategy is 'pinned'
+      if (this.versionStrategy === 'pinned') {
+        const pinnedVersions = await this.readPinnedVersions(cachePath);
+        if (pinnedVersions) {
+          for (const [pkg, version] of Object.entries(dependencies)) {
+            if (pinnedVersions[pkg]) {
+              dependencies[pkg] = pinnedVersions[pkg];
+            }
+          }
+          console.log(
+            'Applied pinned versions:',
+            dependencies
+          );
+        }
+      }
+
       // Create package.json
       const packageJson = {
         name: 'codeharbor-execution',
@@ -278,6 +295,13 @@ class DependencyService {
                 await fs.cp(targetNodeModules, cacheModulesPath, {
                   recursive: true,
                 });
+
+                // Save pinned versions for future use
+                await this.savePinnedVersions(
+                  cachePath,
+                  actualDependencies
+                );
+
                 console.log(
                   `Dependencies cached successfully with key: ${cacheKey}`
                 );
@@ -297,6 +321,40 @@ class DependencyService {
     } catch (error) {
       console.error('Error in dependency installation:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Read pinned versions from cache
+   */
+  async readPinnedVersions(cachePath) {
+    try {
+      const pinnedPath = path.join(cachePath, 'pinned-versions.json');
+      const data = await fs.readFile(pinnedPath, 'utf8');
+      return JSON.parse(data);
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Save pinned versions to cache
+   */
+  async savePinnedVersions(cachePath, installedVersions) {
+    try {
+      // Filter out packages with 'unknown' versions
+      const versions = {};
+      for (const [pkg, version] of Object.entries(installedVersions)) {
+        if (version !== 'unknown') {
+          versions[pkg] = version;
+        }
+      }
+
+      const pinnedPath = path.join(cachePath, 'pinned-versions.json');
+      await fs.writeFile(pinnedPath, JSON.stringify(versions, null, 2));
+      console.log('Pinned versions saved:', versions);
+    } catch (error) {
+      console.error('Error saving pinned versions:', error);
     }
   }
 

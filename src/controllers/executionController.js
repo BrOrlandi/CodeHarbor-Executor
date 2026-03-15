@@ -5,18 +5,19 @@ const crypto = require('crypto');
 const fs = require('fs/promises');
 
 class ExecutionController {
-  constructor(dependencyService, executionService, cacheService, cacheDir) {
+  constructor(dependencyService, executionService, cacheService, cacheDir, jobService) {
     this.dependencyService = dependencyService;
     this.executionService = executionService;
     this.cacheService = cacheService;
     this.cacheDir = cacheDir;
+    this.jobService = jobService || null;
   }
 
   /**
    * Format bytes into human readable format
    */
   formatBytes(bytes, decimals = 2) {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes <= 0) return '0 Bytes';
 
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
@@ -77,15 +78,12 @@ class ExecutionController {
   }
 
   /**
-   * Handle code execution requests
+   * Core execution logic extracted for reuse by dashboard submitJob
+   * Returns the result object without writing to response
    */
-  async executeCode(req, res) {
-    const { code, items = [], cacheKey, options = {} } = req.body;
-
-    // Track start time to measure total response time
+  async executeCodeInternal({ code, items = [], cacheKey, options = {} }) {
     const apiStartTime = performance.now();
 
-    // Initialize debug info if debugging is enabled
     let debugInfo = options.debug
       ? {
           server: {
@@ -106,43 +104,22 @@ class ExecutionController {
         }
       : null;
 
-    if (!code) {
-      return res
-        .status(400)
-        .json({ success: false, error: 'Code is required' });
-    }
-
-    if (!cacheKey) {
-      return res.status(400).json({
-        success: false,
-        error:
-          'Cache key is required (should be a hash of workflow ID and node name)',
-      });
-    }
-
-    // Extract options
-    const executionTimeout = options.timeout || undefined; // Will use default from service
+    const executionTimeout = options.timeout || undefined;
     const forceUpdate = options.forceUpdate || false;
 
-    // Log execution request
     console.log(
       `Execution request: cacheKey=${cacheKey}, forceUpdate=${forceUpdate}, debug=${!!options.debug}`
     );
 
-    // Extract dependencies from the code
     const dependencies = this.dependencyService.extractDependencies(code);
     console.log('Extracted dependencies:', dependencies);
 
-    // Create execution directory
     let executionDir;
     try {
       executionDir = await this.executionService.createExecutionDir();
-
-      // Setup cache path
       const cachePath = path.join(path.resolve(this.cacheDir), cacheKey);
 
       if (debugInfo) {
-        // Get total cache size before installation
         const cacheEntries = await this.cacheService.getCacheEntries();
         debugInfo.cache.totalCacheSize = cacheEntries.reduce(
           (sum, entry) => sum + entry.size,
@@ -150,7 +127,6 @@ class ExecutionController {
         );
       }
 
-      // Install dependencies
       const installStartTime = performance.now();
       const installResult = await this.dependencyService.installDependencies(
         dependencies,
@@ -166,11 +142,9 @@ class ExecutionController {
           installEndTime - installStartTime
         ).toFixed(2);
 
-        // Check if cache was used
         const cacheInfo = await this.cacheService.getCacheEntryInfo(cacheKey);
         debugInfo.cache.usedCache = cacheInfo.exists && !forceUpdate;
 
-        // Get current cache size
         if (cacheInfo.exists) {
           debugInfo.cache.currentCacheSize = cacheInfo.size;
           debugInfo.cache.currentCacheSizeFormatted = this.formatBytes(
@@ -178,7 +152,6 @@ class ExecutionController {
           );
         }
 
-        // Get total cache size after installation
         const updatedCacheEntries = await this.cacheService.getCacheEntries();
         const totalSize = updatedCacheEntries.reduce(
           (sum, entry) => sum + entry.size,
@@ -187,14 +160,9 @@ class ExecutionController {
         debugInfo.cache.totalCacheSize = totalSize;
         debugInfo.cache.totalCacheSizeFormatted = this.formatBytes(totalSize);
 
-        // Store actual installed dependencies for debug info
         debugInfo.execution.installedDependencies = installResult.dependencies;
       }
 
-      // Print items
-      // console.log('Items:', items);
-
-      // Execute the code
       const result = await this.executionService.executeCode(
         code,
         items,
@@ -203,14 +171,12 @@ class ExecutionController {
         options.debug
       );
 
-      // Calculate total response time
       if (debugInfo) {
         const apiEndTime = performance.now();
         debugInfo.execution.totalResponseTimeMs = (
           apiEndTime - apiStartTime
         ).toFixed(2);
 
-        // Merge debug info from execution with our collected info
         if (result.debug) {
           result.debug = {
             ...result.debug,
@@ -221,26 +187,22 @@ class ExecutionController {
         }
       }
 
-      // Clean up the execution directory
       await this.executionService.cleanupExecutionDir(executionDir);
 
-      return res.json(result);
+      return result;
     } catch (error) {
       console.error('Error: ' + error.stack);
 
-      // Clean up the execution directory if it was created
       if (executionDir) {
         await this.executionService.cleanupExecutionDir(executionDir);
       }
 
-      // Calculate total response time for error case
       if (debugInfo) {
         const apiEndTime = performance.now();
         debugInfo.execution.totalResponseTimeMs = (
           apiEndTime - apiStartTime
         ).toFixed(2);
 
-        // Add debug info to error response if requested
         if (error.debug) {
           error.debug = {
             ...error.debug,
@@ -253,17 +215,119 @@ class ExecutionController {
 
       const filteredStack = this.filterErrorStack(error);
 
-      // If no error message use the first console message
-      if (!error.error && error.console.length > 0) {
+      if (!error.error && error.console && error.console.length > 0) {
         error.error = error.console[0].message;
       }
 
-      return res.status(200).json({
+      return {
         success: false,
         error: error.error || 'Internal server error',
         stack: filteredStack,
+        console: error.console || [],
         ...(options.debug && !error.debug ? { debug: debugInfo } : {}),
+        ...(error.debug ? { debug: error.debug } : {}),
+      };
+    }
+  }
+
+  /**
+   * Handle code execution requests
+   */
+  async executeCode(req, res) {
+    const { code, items = [], cacheKey, options = {} } = req.body;
+
+    if (!code) {
+      return res
+        .status(400)
+        .json({ success: false, error: 'Code is required' });
+    }
+
+    if (!cacheKey) {
+      return res.status(400).json({
+        success: false,
+        error:
+          'Cache key is required (should be a hash of workflow ID and node name)',
       });
+    }
+
+    // Create job record if jobService is available
+    let jobId = null;
+    if (this.jobService) {
+      try {
+        const metadata = {
+          ip: req.ip,
+          userAgent: req.get('user-agent'),
+        };
+        jobId = this.jobService.createJob({
+          code,
+          items,
+          cacheKey,
+          options,
+          metadata,
+        });
+        this.jobService.updateJobStatus(jobId, 'running');
+      } catch (err) {
+        console.error('Failed to create job record:', err);
+      }
+    }
+
+    let result;
+    try {
+      result = await this.executeCodeInternal({ code, items, cacheKey, options });
+    } catch (err) {
+      console.error('Unexpected execution error:', err);
+      if (this.jobService && jobId) {
+        try { this.jobService.completeJob(jobId, { status: 'error', errorMessage: err.message || 'Internal error' }); } catch {}
+      }
+      return res.status(500).json({ success: false, error: 'Internal server error', ...(jobId ? { jobId } : {}) });
+    }
+
+    // Complete job record if jobService is available
+    if (this.jobService && jobId) {
+      try {
+        if (result.success) {
+          this.jobService.completeJob(jobId, {
+            status: 'success',
+            resultData: result.data,
+            consoleOutput: result.console,
+            executionTimeMs: result.debug?.execution?.totalResponseTimeMs
+              ? parseFloat(result.debug.execution.totalResponseTimeMs)
+              : null,
+            depInstallTimeMs: result.debug?.execution?.dependencyInstallTimeMs
+              ? parseFloat(result.debug.execution.dependencyInstallTimeMs)
+              : null,
+            usedCache: result.debug?.cache?.usedCache || false,
+            dependencies: result.debug?.execution?.installedDependencies || null,
+          });
+        } else {
+          this.jobService.completeJob(jobId, {
+            status: 'error',
+            consoleOutput: result.console,
+            errorMessage: result.error,
+            errorStack: result.stack,
+            executionTimeMs: result.debug?.execution?.totalResponseTimeMs
+              ? parseFloat(result.debug.execution.totalResponseTimeMs)
+              : null,
+            depInstallTimeMs: result.debug?.execution?.dependencyInstallTimeMs
+              ? parseFloat(result.debug.execution.dependencyInstallTimeMs)
+              : null,
+            usedCache: result.debug?.cache?.usedCache || false,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to complete job record:', err);
+      }
+    }
+
+    // Add jobId to response if available
+    if (jobId) {
+      result.jobId = jobId;
+    }
+
+    if (result.success) {
+      return res.json(result);
+    } else {
+      return res.status(200).json(result);
     }
   }
 

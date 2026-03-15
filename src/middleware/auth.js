@@ -1,9 +1,26 @@
+const crypto = require('crypto');
+
 /**
  * Authentication middleware
  */
 function authMiddleware(req, res, next) {
   // Skip auth for health check
   if (req.path === '/health') {
+    return next();
+  }
+
+  // Skip auth for dashboard static files and SPA
+  if (req.path.startsWith('/dashboard')) {
+    return next();
+  }
+
+  // Skip auth for dashboard API routes (they use cookie-based auth)
+  if (req.path.startsWith('/api/dashboard')) {
+    return next();
+  }
+
+  // Skip auth for API docs
+  if (req.path.startsWith('/api/docs') || req.path === '/api/openapi.yaml') {
     return next();
   }
 
@@ -25,7 +42,9 @@ function authMiddleware(req, res, next) {
 
   const token = authHeader.split(' ')[1];
 
-  if (token !== SECRET_KEY) {
+  const tokenBuf = Buffer.from(token);
+  const secretBuf = Buffer.from(SECRET_KEY);
+  if (tokenBuf.length !== secretBuf.length || !crypto.timingSafeEqual(tokenBuf, secretBuf)) {
     return res.status(403).json({
       success: false,
       error: 'Invalid authentication token',
