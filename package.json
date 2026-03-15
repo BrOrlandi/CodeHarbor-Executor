@@ -1,20 +1,24 @@
 {
   "name": "codeharbor-executor",
-  "version": "0.2.0",
+  "version": "2.0.0",
   "description": "Node.js code execution service for CodeHarbor n8n node",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon --ignore './dependencies-cache/' --ignore './executions/' --ignore './bruno-rest-client/' index.js",
+    "dev": "nodemon --ignore './dependencies-cache/' --ignore './executions/' --ignore './bruno-rest-client/' --ignore './data/' --ignore './dashboard/' index.js",
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:e2e": "vitest run tests/e2e --testTimeout=60000",
     "test:coverage": "vitest run tests/unit --coverage"
   },
   "dependencies": {
+    "better-sqlite3": "^11.8.1",
     "body-parser": "^1.20.3",
+    "cookie-parser": "^1.4.7",
     "dotenv": "^16.4.7",
-    "express": "^4.21.2"
+    "express": "^4.21.2",
+    "swagger-ui-express": "^5.0.1",
+    "yaml": "^2.7.1"
   },
   "engines": {
     "node": ">=22.0.0"
