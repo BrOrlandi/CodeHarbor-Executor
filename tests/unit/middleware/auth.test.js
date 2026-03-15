@@ -5,7 +5,7 @@ function createMockReqRes(options = {}) {
     path: options.path || '/execute',
     headers: options.headers || {},
     app: {
-      get: jest.fn((key) => {
+      get: vi.fn((key) => {
         if (key === 'secretKey') return options.secretKey ?? 'test-secret';
         return undefined;
       }),
@@ -13,11 +13,11 @@ function createMockReqRes(options = {}) {
   };
 
   const res = {
-    status: jest.fn().mockReturnThis(),
-    json: jest.fn().mockReturnThis(),
+    status: vi.fn().mockReturnThis(),
+    json: vi.fn().mockReturnThis(),
   };
 
-  const next = jest.fn();
+  const next = vi.fn();
 
   return { req, res, next };
 }

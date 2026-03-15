@@ -8,18 +8,18 @@ describe('ExecutionController', () => {
 
   beforeEach(() => {
     mockDependencyService = {
-      extractDependencies: jest.fn().mockReturnValue({}),
-      installDependencies: jest.fn().mockResolvedValue({ success: true, dependencies: {} }),
+      extractDependencies: vi.fn().mockReturnValue({}),
+      installDependencies: vi.fn().mockResolvedValue({ success: true, dependencies: {} }),
     };
     mockExecutionService = {
-      createExecutionDir: jest.fn().mockResolvedValue('/tmp/exec-123'),
-      executeCode: jest.fn().mockResolvedValue({ success: true, data: [], console: [] }),
-      cleanupExecutionDir: jest.fn().mockResolvedValue(undefined),
+      createExecutionDir: vi.fn().mockResolvedValue('/tmp/exec-123'),
+      executeCode: vi.fn().mockResolvedValue({ success: true, data: [], console: [] }),
+      cleanupExecutionDir: vi.fn().mockResolvedValue(undefined),
     };
     mockCacheService = {
-      getCacheEntries: jest.fn().mockResolvedValue([]),
-      getCacheEntryInfo: jest.fn().mockResolvedValue({ exists: false, size: 0 }),
-      cleanupCache: jest.fn().mockResolvedValue(undefined),
+      getCacheEntries: vi.fn().mockResolvedValue([]),
+      getCacheEntryInfo: vi.fn().mockResolvedValue({ exists: false, size: 0 }),
+      cleanupCache: vi.fn().mockResolvedValue(undefined),
     };
 
     controller = new ExecutionController(
@@ -98,13 +98,13 @@ describe('ExecutionController', () => {
     it('returns status ok with config info', async () => {
       const req = {
         app: {
-          get: jest.fn((key) => {
+          get: vi.fn((key) => {
             if (key === 'secretKey') return 'my-secret';
             if (key === 'defaultTimeout') return 30000;
           }),
         },
       };
-      const res = { json: jest.fn() };
+      const res = { json: vi.fn() };
 
       await controller.healthCheck(req, res);
 
@@ -119,13 +119,13 @@ describe('ExecutionController', () => {
     it('shows auth disabled when no secret key', async () => {
       const req = {
         app: {
-          get: jest.fn((key) => {
+          get: vi.fn((key) => {
             if (key === 'secretKey') return '';
             if (key === 'defaultTimeout') return 60000;
           }),
         },
       };
-      const res = { json: jest.fn() };
+      const res = { json: vi.fn() };
 
       await controller.healthCheck(req, res);
 
@@ -138,7 +138,7 @@ describe('ExecutionController', () => {
   describe('verifyAuth', () => {
     it('returns authentication successful', async () => {
       const req = {};
-      const res = { json: jest.fn() };
+      const res = { json: vi.fn() };
 
       await controller.verifyAuth(req, res);
 
@@ -155,8 +155,8 @@ describe('ExecutionController', () => {
       return {
         req: { body },
         res: {
-          status: jest.fn().mockReturnThis(),
-          json: jest.fn().mockReturnThis(),
+          status: vi.fn().mockReturnThis(),
+          json: vi.fn().mockReturnThis(),
         },
       };
     }

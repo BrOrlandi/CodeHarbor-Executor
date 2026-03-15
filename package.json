@@ -6,10 +6,10 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon --ignore './dependencies-cache/' --ignore './executions/' --ignore './bruno-rest-client/' index.js",
-    "test": "jest --config tests/jest.config.js",
-    "test:unit": "jest --config tests/jest.config.js --selectProjects unit",
-    "test:e2e": "jest --config tests/jest.config.js --selectProjects e2e",
-    "test:coverage": "jest --config tests/jest.config.js --selectProjects unit --coverage"
+    "test": "vitest run",
+    "test:unit": "vitest run tests/unit",
+    "test:e2e": "vitest run tests/e2e --testTimeout=60000",
+    "test:coverage": "vitest run tests/unit --coverage"
   },
   "dependencies": {
     "body-parser": "^1.20.3",
@@ -20,8 +20,9 @@
     "node": ">=22.0.0"
   },
   "devDependencies": {
-    "jest": "^30.3.0",
-    "nodemon": "^3.1.9"
+    "@vitest/coverage-v8": "^4.1.0",
+    "nodemon": "^3.1.9",
+    "vitest": "^4.1.0"
   },
   "packageManager": "pnpm@9.15.4+sha512.b2dc20e2fc72b3e18848459b37359a32064663e5627a51e4c74b2c29dd8e8e0491483c3abb40789cfd578bf362fb6ba8261b05f0387d76792ed6e23ea3b1b6a0"
 }

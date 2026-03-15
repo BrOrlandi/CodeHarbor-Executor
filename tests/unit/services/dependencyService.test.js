@@ -6,12 +6,12 @@ const DependencyService = require('../../../src/services/dependencyService');
 describe('DependencyService', () => {
   let service;
   const mockCacheService = {
-    cleanupCache: jest.fn().mockResolvedValue(undefined),
+    cleanupCache: vi.fn().mockResolvedValue(undefined),
   };
 
   beforeEach(() => {
     service = new DependencyService(mockCacheService, 'update');
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('extractDependencies', () => {
@@ -175,7 +175,6 @@ describe('DependencyService', () => {
     });
 
     it('creates symlink from cache when cache hit and all deps present', async () => {
-      // Set up cached node_modules with a fake package
       const cacheModules = path.join(cachePath, 'node_modules');
       const pkgDir = path.join(cacheModules, 'lodash');
       await fs.mkdir(pkgDir, { recursive: true });
@@ -192,7 +191,6 @@ describe('DependencyService', () => {
       expect(result.success).toBe(true);
       expect(result.dependencies.lodash).toBe('4.17.21');
 
-      // Verify symlink was created
       const linkTarget = await fs.readlink(path.join(codeDir, 'node_modules'));
       expect(linkTarget).toBe(cacheModules);
     });
