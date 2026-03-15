@@ -103,11 +103,22 @@ class DashboardController {
         jobCountMap[row.cache_key] = { count: row.count, lastUsed: row.last_used };
       }
 
-      const enrichedEntries = entries.map(e => ({
-        ...e,
-        jobCount: jobCountMap[e.key]?.count || 0,
-        lastUsed: jobCountMap[e.key]?.lastUsed || null,
-      }));
+      const fs = require('fs');
+      const enrichedEntries = entries.map(e => {
+        let dependencies = null;
+        try {
+          const pinnedPath = path.join(e.path, 'pinned-versions.json');
+          if (fs.existsSync(pinnedPath)) {
+            dependencies = JSON.parse(fs.readFileSync(pinnedPath, 'utf8'));
+          }
+        } catch {}
+        return {
+          ...e,
+          dependencies,
+          jobCount: jobCountMap[e.key]?.count || 0,
+          lastUsed: jobCountMap[e.key]?.lastUsed || null,
+        };
+      });
 
       return res.json({ entries: enrichedEntries, totalSize, sizeLimit: cacheSizeLimit });
     } catch (error) {
