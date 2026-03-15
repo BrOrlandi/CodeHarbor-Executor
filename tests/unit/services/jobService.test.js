@@ -313,4 +313,62 @@ describe('JobService', () => {
       expect(result.total).toBe(2);
     });
   });
+
+  describe('recoverInterruptedJobs', () => {
+    it('marks running jobs as interrupted', () => {
+      const jobId = jobService.createJob({ code: 'code' });
+      jobService.updateJobStatus(jobId, 'running');
+
+      const count = jobService.recoverInterruptedJobs();
+
+      expect(count).toBe(1);
+      const job = jobService.getJob(jobId);
+      expect(job.status).toBe('interrupted');
+      expect(job.error_message).toBe('Execution interrupted by server restart');
+      expect(job.completed_at).toBeDefined();
+    });
+
+    it('marks pending jobs as interrupted', () => {
+      const jobId = jobService.createJob({ code: 'code' });
+
+      const count = jobService.recoverInterruptedJobs();
+
+      expect(count).toBe(1);
+      const job = jobService.getJob(jobId);
+      expect(job.status).toBe('interrupted');
+    });
+
+    it('does not affect success or error jobs', () => {
+      const j1 = jobService.createJob({ code: 'c1' });
+      jobService.completeJob(j1, { status: 'success' });
+      const j2 = jobService.createJob({ code: 'c2' });
+      jobService.completeJob(j2, { status: 'error', errorMessage: 'fail' });
+
+      const count = jobService.recoverInterruptedJobs();
+
+      expect(count).toBe(0);
+      expect(jobService.getJob(j1).status).toBe('success');
+      expect(jobService.getJob(j2).status).toBe('error');
+    });
+
+    it('recovers multiple jobs at once', () => {
+      const j1 = jobService.createJob({ code: 'c1' });
+      jobService.updateJobStatus(j1, 'running');
+      const j2 = jobService.createJob({ code: 'c2' });
+      // j2 stays pending
+      const j3 = jobService.createJob({ code: 'c3' });
+      jobService.completeJob(j3, { status: 'success' });
+
+      const count = jobService.recoverInterruptedJobs();
+
+      expect(count).toBe(2);
+      expect(jobService.getJob(j1).status).toBe('interrupted');
+      expect(jobService.getJob(j2).status).toBe('interrupted');
+      expect(jobService.getJob(j3).status).toBe('success');
+    });
+
+    it('returns 0 when no jobs need recovery', () => {
+      expect(jobService.recoverInterruptedJobs()).toBe(0);
+    });
+  });
 });
