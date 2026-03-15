@@ -1,6 +1,8 @@
+const crypto = require('crypto');
 const { generateToken } = require('../middleware/dashboardAuth');
 const { execSync } = require('child_process');
 const path = require('path');
+const fs = require('fs');
 
 class DashboardController {
   constructor(jobService, cacheService, executionController) {
@@ -19,7 +21,7 @@ class DashboardController {
 
   _getPnpmVersion() {
     try {
-      return execSync('pnpm --version', { encoding: 'utf8' }).trim();
+      return execSync('pnpm --version', { encoding: 'utf8', timeout: 3000 }).trim();
     } catch {
       return null;
     }
@@ -30,12 +32,13 @@ class DashboardController {
     const serverSecret = req.app.get('secretKey');
 
     if (!serverSecret) {
-      // No auth configured, just set a dummy cookie
       res.cookie('codeharbor_session', 'no-auth', { httpOnly: true, sameSite: 'strict', path: '/' });
       return res.json({ success: true });
     }
 
-    if (secretKey !== serverSecret) {
+    const inputBuf = Buffer.from(String(secretKey || ''));
+    const secretBuf = Buffer.from(serverSecret);
+    if (inputBuf.length !== secretBuf.length || !crypto.timingSafeEqual(inputBuf, secretBuf)) {
       return res.status(403).json({ success: false, error: 'Invalid secret key' });
     }
 
@@ -44,7 +47,8 @@ class DashboardController {
       httpOnly: true,
       sameSite: 'strict',
       path: '/',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure: process.env.NODE_ENV === 'production',
     });
     return res.json({ success: true });
   }
@@ -60,7 +64,7 @@ class DashboardController {
       const result = this.jobService.getJobs({
         status, cacheKey, search, sortBy, sortOrder,
         page: page ? parseInt(page, 10) : 1,
-        limit: limit ? parseInt(limit, 10) : 20,
+        limit: limit ? Math.min(parseInt(limit, 10), 100) : 20,
       });
       return res.json(result);
     } catch (error) {
@@ -93,17 +97,8 @@ class DashboardController {
       const cacheSizeLimit = req.app.get('cacheSizeLimit');
       const totalSize = entries.reduce((sum, e) => sum + e.size, 0);
 
-      // Get job counts per cache key
-      const db = this.jobService.databaseService.getDb();
-      const jobCounts = db.prepare(
-        'SELECT cache_key, COUNT(*) as count, MAX(created_at) as last_used FROM jobs WHERE cache_key IS NOT NULL GROUP BY cache_key'
-      ).all();
-      const jobCountMap = {};
-      for (const row of jobCounts) {
-        jobCountMap[row.cache_key] = { count: row.count, lastUsed: row.last_used };
-      }
+      const jobCountMap = this.jobService.getJobCountsByCacheKey();
 
-      const fs = require('fs');
       const enrichedEntries = entries.map(e => {
         let dependencies = null;
         try {
@@ -137,8 +132,9 @@ class DashboardController {
         metadata: { ip: req.ip, userAgent: req.headers['user-agent'], source: 'dashboard' }
       });
 
-      // Execute async - don't await
-      this._executeJobAsync(jobId, { code, items: items || [], cacheKey, options: options || {} });
+      // Execute async with error handling
+      this._executeJobAsync(jobId, { code, items: items || [], cacheKey, options: options || {} })
+        .catch(err => console.error('Unhandled error in async job execution:', err));
 
       return res.json({ success: true, jobId });
     } catch (error) {
@@ -150,7 +146,6 @@ class DashboardController {
     try {
       this.jobService.updateJobStatus(jobId, 'running');
 
-      // Build a fake req/res to reuse executeCode logic
       const result = await this.executionController.executeCodeInternal({
         code, items, cacheKey, options
       });

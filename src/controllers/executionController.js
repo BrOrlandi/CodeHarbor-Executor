@@ -17,7 +17,7 @@ class ExecutionController {
    * Format bytes into human readable format
    */
   formatBytes(bytes, decimals = 2) {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes <= 0) return '0 Bytes';
 
     const k = 1024;
     const dm = decimals < 0 ? 0 : decimals;
@@ -271,7 +271,16 @@ class ExecutionController {
       }
     }
 
-    const result = await this.executeCodeInternal({ code, items, cacheKey, options });
+    let result;
+    try {
+      result = await this.executeCodeInternal({ code, items, cacheKey, options });
+    } catch (err) {
+      console.error('Unexpected execution error:', err);
+      if (this.jobService && jobId) {
+        try { this.jobService.completeJob(jobId, { status: 'error', errorMessage: err.message || 'Internal error' }); } catch {}
+      }
+      return res.status(500).json({ success: false, error: 'Internal server error', ...(jobId ? { jobId } : {}) });
+    }
 
     // Complete job record if jobService is available
     if (this.jobService && jobId) {

@@ -179,13 +179,20 @@ async function start() {
 // Graceful shutdown
 function shutdown() {
   console.log('Shutting down gracefully...');
+  const forceTimeout = setTimeout(() => {
+    console.error('Forced shutdown after timeout');
+    process.exit(1);
+  }, 10000);
+  forceTimeout.unref();
   if (server) {
     server.close(() => {
+      clearTimeout(forceTimeout);
       databaseService.close();
       console.log('Server closed');
       process.exit(0);
     });
   } else {
+    clearTimeout(forceTimeout);
     databaseService.close();
     process.exit(0);
   }

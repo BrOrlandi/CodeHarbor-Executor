@@ -25,13 +25,7 @@ describe('DashboardController', () => {
       getJob: vi.fn().mockReturnValue(null),
       getJobStats: vi.fn().mockReturnValue({ total: 0, success: 0, error: 0, avgExecutionTimeMs: 0 }),
       deleteJob: vi.fn().mockReturnValue(false),
-      databaseService: {
-        getDb: vi.fn().mockReturnValue({
-          prepare: vi.fn().mockReturnValue({
-            all: vi.fn().mockReturnValue([]),
-          }),
-        }),
-      },
+      getJobCountsByCacheKey: vi.fn().mockReturnValue({}),
     };
 
     mockCacheService = {
@@ -230,12 +224,8 @@ describe('DashboardController', () => {
         { key: 'key-1', size: 1000, lastModified: new Date() },
       ]);
 
-      mockJobService.databaseService.getDb.mockReturnValue({
-        prepare: vi.fn().mockReturnValue({
-          all: vi.fn().mockReturnValue([
-            { cache_key: 'key-1', count: 5, last_used: '2024-01-01 00:00:00' },
-          ]),
-        }),
+      mockJobService.getJobCountsByCacheKey.mockReturnValue({
+        'key-1': { count: 5, lastUsed: '2024-01-01 00:00:00' },
       });
 
       const req = {

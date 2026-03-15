@@ -144,7 +144,9 @@ class JobService {
     const safeSortBy = allowedSortColumns.includes(sortBy) ? sortBy : 'created_at';
     const safeSortOrder = sortOrder === 'asc' ? 'ASC' : 'DESC';
 
-    const offset = (page - 1) * limit;
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.max(1, limit);
+    const offset = (safePage - 1) * safeLimit;
 
     // Get total count
     const countRow = db
@@ -160,14 +162,14 @@ class JobService {
          ORDER BY ${safeSortBy} ${safeSortOrder}
          LIMIT @limit OFFSET @offset`
       )
-      .all({ ...params, limit, offset });
+      .all({ ...params, limit: safeLimit, offset });
 
     return {
       jobs,
       total: countRow.total,
-      page,
-      limit,
-      totalPages: Math.ceil(countRow.total / limit),
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(countRow.total / safeLimit),
     };
   }
 
@@ -216,6 +218,21 @@ class JobService {
       .prepare('DELETE FROM jobs WHERE job_id = ?')
       .run(jobId);
     return result.changes > 0;
+  }
+
+  /**
+   * Get job counts grouped by cache key
+   */
+  getJobCountsByCacheKey() {
+    const db = this.databaseService.getDb();
+    const rows = db.prepare(
+      'SELECT cache_key, COUNT(*) as count, MAX(created_at) as last_used FROM jobs WHERE cache_key IS NOT NULL GROUP BY cache_key'
+    ).all();
+    const map = {};
+    for (const row of rows) {
+      map[row.cache_key] = { count: row.count, lastUsed: row.last_used };
+    }
+    return map;
   }
 }
 

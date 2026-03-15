@@ -12,7 +12,9 @@ function verifyToken(token, secretKey) {
   if (parts.length !== 2) return false;
   const [timestamp, hmac] = parts;
   const expectedHmac = crypto.createHmac('sha256', secretKey).update(timestamp).digest('hex');
-  if (hmac !== expectedHmac) return false;
+  const hmacBuf = Buffer.from(hmac, 'hex');
+  const expectedBuf = Buffer.from(expectedHmac, 'hex');
+  if (hmacBuf.length !== expectedBuf.length || !crypto.timingSafeEqual(hmacBuf, expectedBuf)) return false;
   // Token valid for 7 days
   const age = Date.now() - parseInt(timestamp, 10);
   return age < 7 * 24 * 60 * 60 * 1000;
