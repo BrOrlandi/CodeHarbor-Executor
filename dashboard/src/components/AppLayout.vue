@@ -24,6 +24,11 @@
           <svg class="nav-svg" viewBox="0 0 20 20" fill="currentColor"><path d="M3 5a2 2 0 012-2h10a2 2 0 012 2v2a2 2 0 01-2 2H5a2 2 0 01-2-2V5zm2-.5a.5.5 0 00-.5.5v2a.5.5 0 00.5.5h10a.5.5 0 00.5-.5V5a.5.5 0 00-.5-.5H5zM3 13a2 2 0 012-2h10a2 2 0 012 2v2a2 2 0 01-2 2H5a2 2 0 01-2-2v-2zm2-.5a.5.5 0 00-.5.5v2a.5.5 0 00.5.5h10a.5.5 0 00.5-.5v-2a.5.5 0 00-.5-.5H5z"/></svg>
           <span class="nav-text" v-show="!sidebarCollapsed">Cache</span>
         </router-link>
+        <router-link to="/crons" class="nav-link" active-class="active">
+          <svg class="nav-svg" viewBox="0 0 20 20" fill="currentColor"><path d="M10 2a8 8 0 110 16 8 8 0 010-16zm0 1.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM10.75 5v5h3.5v1.5h-5V5h1.5z"/></svg>
+          <span class="nav-text" v-show="!sidebarCollapsed">Crons</span>
+          <span class="chip-soon" v-show="!sidebarCollapsed">SOON</span>
+        </router-link>
         <router-link to="/guide" class="nav-link" active-class="active">
           <svg class="nav-svg" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm2-.5a.5.5 0 00-.5.5v12a.5.5 0 00.5.5h10a.5.5 0 00.5-.5V7.5H12a.5.5 0 01-.5-.5V3.5H5zM13 4.2V6.5h2.3L13 4.2zM7 10h6v1.5H7V10zm0 3h4v1.5H7V13z"/></svg>
           <span class="nav-text" v-show="!sidebarCollapsed">Docs</span>
@@ -35,6 +40,10 @@
         <a href="https://www.npmjs.com/package/n8n-nodes-codeharbor" target="_blank" rel="noopener" class="nav-link">
           <svg class="nav-svg" viewBox="0 0 20 20" fill="currentColor"><path d="M2 2h16v16H2V2zm1.5 1.5v13h6.25V5.75h3.75v10.75H17.5V3.5H3.5z"/></svg>
           <span class="nav-text" v-show="!sidebarCollapsed">n8n Node</span>
+        </a>
+        <a href="https://chatgpt.com/g/g-67cfc39e08b0819188a8101656455aad-codeharbor-code-generator" target="_blank" rel="noopener" class="nav-link">
+          <svg class="nav-svg" viewBox="0 0 24 24" fill="currentColor"><path d="M22.282 9.821a5.985 5.985 0 0 0-.516-4.91 6.046 6.046 0 0 0-6.51-2.9A6.065 6.065 0 0 0 4.981 4.18a5.998 5.998 0 0 0-3.998 2.9 6.047 6.047 0 0 0 .743 7.097 5.98 5.98 0 0 0 .51 4.911 6.051 6.051 0 0 0 6.515 2.9A5.985 5.985 0 0 0 13.26 24a6.056 6.056 0 0 0 5.772-4.206 5.99 5.99 0 0 0 3.997-2.9 6.056 6.056 0 0 0-.747-7.073zM13.26 22.43a4.476 4.476 0 0 1-2.876-1.04l.141-.081 4.779-2.758a.795.795 0 0 0 .392-.681v-6.737l2.02 1.168a.071.071 0 0 1 .038.052v5.583a4.504 4.504 0 0 1-4.494 4.494zM3.6 18.304a4.47 4.47 0 0 1-.535-3.014l.142.085 4.783 2.759a.771.771 0 0 0 .78 0l5.843-3.369v2.332a.08.08 0 0 1-.033.062L9.74 19.95a4.5 4.5 0 0 1-6.14-1.646zM2.34 7.896a4.485 4.485 0 0 1 2.366-1.973V11.6a.766.766 0 0 0 .388.676l5.815 3.355-2.02 1.168a.076.076 0 0 1-.071 0l-4.83-2.786A4.504 4.504 0 0 1 2.34 7.872zm16.597 3.855l-5.833-3.387L15.119 7.2a.076.076 0 0 1 .071 0l4.83 2.791a4.494 4.494 0 0 1-.676 8.105v-5.678a.79.79 0 0 0-.407-.667zm2.01-3.023l-.141-.085-4.774-2.782a.776.776 0 0 0-.785 0L9.409 9.23V6.897a.066.066 0 0 1 .028-.061l4.83-2.787a4.5 4.5 0 0 1 6.68 4.66zm-12.64 4.135l-2.02-1.164a.08.08 0 0 1-.038-.057V6.075a4.5 4.5 0 0 1 7.375-3.453l-.142.08L8.704 5.46a.795.795 0 0 0-.393.681zm1.097-2.365l2.602-1.5 2.607 1.5v2.999l-2.597 1.5-2.612-1.5z"/></svg>
+          <span class="nav-text" v-show="!sidebarCollapsed">ChatGPT Agent</span>
         </a>
       </nav>
 
@@ -214,6 +223,19 @@ async function handleLogout() {
 .nav-text {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.chip-soon {
+  margin-left: auto;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--brand-wash-strong);
+  color: var(--brand);
+  line-height: 1.5;
+  flex-shrink: 0;
 }
 
 .sidebar-bottom {

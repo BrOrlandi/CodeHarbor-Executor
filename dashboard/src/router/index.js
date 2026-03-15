@@ -33,6 +33,11 @@ const routes = [
     component: () => import('@/views/CacheView.vue'),
   },
   {
+    path: '/crons',
+    name: 'crons',
+    component: () => import('@/views/CronsView.vue'),
+  },
+  {
     path: '/guide',
     name: 'guide',
     component: () => import('@/views/DocsView.vue'),
