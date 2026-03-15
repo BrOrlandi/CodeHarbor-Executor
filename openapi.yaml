@@ -1,0 +1,403 @@
+openapi: 3.0.3
+info:
+  title: CodeHarbor Executor API
+  description: Node.js code execution service for CodeHarbor n8n node
+  version: 0.2.0
+  contact:
+    name: CodeHarbor Executor
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://your-domain.com
+    description: Production server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer token authentication using SECRET_KEY
+
+  schemas:
+    ExecuteRequest:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          type: string
+          description: JavaScript code to execute
+          example: |
+            const { items } = input;
+            return items.map(item => ({ ...item, processed: true }));
+        items:
+          type: array
+          description: Array of items to process
+          items:
+            type: object
+          default: []
+          example:
+            - id: 1
+              name: "Item 1"
+            - id: 2
+              name: "Item 2"
+        cacheKey:
+          type: string
+          description: Cache key for dependency caching. If not provided, uses global cache
+          example: "my-project-cache"
+        options:
+          type: object
+          properties:
+            timeout:
+              type: integer
+              description: Execution timeout in milliseconds
+              minimum: 1000
+              maximum: 300000
+              example: 60000
+            forceUpdate:
+              type: boolean
+              description: Force update dependencies cache
+              default: false
+              example: false
+            debug:
+              type: boolean
+              description: Enable debug information in response
+              default: false
+              example: true
+
+    ExecuteResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether the execution was successful
+          example: true
+        data:
+          description: The result of code execution
+          example:
+            - id: 1
+              name: "Item 1"
+              processed: true
+            - id: 2
+              name: "Item 2"
+              processed: true
+        console:
+          type: array
+          description: Console output from the executed code
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+                enum: [log, error, warn, info, debug]
+              message:
+                type: string
+              timestamp:
+                type: string
+                format: date-time
+        debug:
+          type: object
+          description: Debug information (only included when debug option is true)
+          properties:
+            server:
+              type: object
+              properties:
+                nodeVersion:
+                  type: string
+                  example: "v20.11.0"
+            cache:
+              type: object
+              properties:
+                usedCache:
+                  type: boolean
+                cacheKey:
+                  type: string
+                isGlobalCache:
+                  type: boolean
+                currentCacheSize:
+                  type: integer
+                currentCacheSizeFormatted:
+                  type: string
+                totalCacheSize:
+                  type: integer
+                totalCacheSizeFormatted:
+                  type: string
+            execution:
+              type: object
+              properties:
+                startTime:
+                  type: string
+                  format: date-time
+                totalResponseTimeMs:
+                  type: string
+                dependencyInstallTimeMs:
+                  type: string
+                installedDependencies:
+                  type: array
+                  items:
+                    type: string
+
+    ExecuteErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+          example: "ReferenceError: undefined_variable is not defined"
+        stack:
+          type: string
+          description: Filtered stack trace
+          example: |
+            ReferenceError: undefined_variable is not defined
+                at execution.js:1:1
+        debug:
+          $ref: '#/components/schemas/ExecuteResponse/properties/debug'
+
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "ok"
+        version:
+          type: string
+          example: "1.0.0"
+        auth:
+          type: string
+          enum: [enabled, disabled]
+          example: "enabled"
+        defaultTimeout:
+          type: string
+          example: "60000ms"
+
+    AuthVerifyResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Authentication successful"
+        authenticated:
+          type: boolean
+          example: true
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          description: Error message
+          example: "Authentication required"
+
+paths:
+  /execute:
+    post:
+      summary: Execute JavaScript code
+      description: |
+        Execute JavaScript code with optional dependencies and items processing.
+        The code has access to an `input` object containing the provided items.
+        Dependencies are automatically extracted from require() statements and installed.
+      operationId: executeCode
+      security:
+        - BearerAuth: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecuteRequest'
+            examples:
+              simple-execution:
+                summary: Simple code execution
+                value:
+                  code: |
+                    const { items } = input;
+                    return items.map(item => ({ ...item, processed: true }));
+                  items:
+                    - id: 1
+                      name: "Item 1"
+                    - id: 2
+                      name: "Item 2"
+              with-dependencies:
+                summary: Code with npm dependencies
+                value:
+                  code: |
+                    const lodash = require('lodash');
+                    const { items } = input;
+                    return lodash.uniqBy(items, 'id');
+                  items:
+                    - id: 1
+                      name: "Item 1"
+                    - id: 1
+                      name: "Item 1 duplicate"
+                    - id: 2
+                      name: "Item 2"
+                  options:
+                    debug: true
+                    timeout: 30000
+              with-cache-key:
+                summary: Using custom cache key
+                value:
+                  code: |
+                    const moment = require('moment');
+                    return moment().format('YYYY-MM-DD HH:mm:ss');
+                  cacheKey: "time-processing-cache"
+      responses:
+        '200':
+          description: Code execution result (success or failure)
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/ExecuteResponse'
+                  - $ref: '#/components/schemas/ExecuteErrorResponse'
+              examples:
+                success:
+                  summary: Successful execution
+                  value:
+                    success: true
+                    data:
+                      - id: 1
+                        name: "Item 1"
+                        processed: true
+                      - id: 2
+                        name: "Item 2"
+                        processed: true
+                    console: []
+                execution-error:
+                  summary: Code execution error
+                  value:
+                    success: false
+                    error: "ReferenceError: undefined_variable is not defined"
+                    stack: |
+                      ReferenceError: undefined_variable is not defined
+                          at execution.js:1:1
+                with-debug:
+                  summary: Response with debug information
+                  value:
+                    success: true
+                    data: "2024-01-15 14:30:25"
+                    console: []
+                    debug:
+                      server:
+                        nodeVersion: "v20.11.0"
+                      cache:
+                        usedCache: true
+                        cacheKey: "time-processing-cache"
+                        isGlobalCache: false
+                        currentCacheSize: 1048576
+                        currentCacheSizeFormatted: "1.00 MB"
+                        totalCacheSize: 5242880
+                        totalCacheSizeFormatted: "5.00 MB"
+                      execution:
+                        startTime: "2024-01-15T14:30:25.123Z"
+                        totalResponseTimeMs: "1250.45"
+                        dependencyInstallTimeMs: "850.23"
+                        installedDependencies: ["moment"]
+        '400':
+          description: Bad request - missing or invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Code is required"
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Authentication required"
+        '403':
+          description: Invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Invalid authentication token"
+
+  /health:
+    get:
+      summary: Health check
+      description: Check the health status of the service
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service health information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "ok"
+                version: "1.0.0"
+                auth: "enabled"
+                defaultTimeout: "60000ms"
+
+  /verify-auth:
+    get:
+      summary: Verify authentication
+      description: Verify that the provided authentication token is valid
+      operationId: verifyAuth
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Authentication verification result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthVerifyResponse'
+              example:
+                success: true
+                message: "Authentication successful"
+                authenticated: true
+        '401':
+          description: Authentication required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Authentication required"
+        '403':
+          description: Invalid authentication token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Invalid authentication token"
+
+security:
+  - BearerAuth: []
+  - {}
+
+tags:
+  - name: execution
+    description: Code execution operations
+  - name: health
+    description: Health and status operations
+  - name: auth
+    description: Authentication operations
