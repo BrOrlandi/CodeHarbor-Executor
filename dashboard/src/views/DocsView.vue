@@ -19,7 +19,9 @@ import readmeRaw from '../../docs/README.md?raw';
 const renderedMarkdown = ref('');
 
 onMounted(() => {
-  renderedMarkdown.value = marked.parse(readmeRaw);
+  // Rewrite relative image paths to serve from /dashboard/images/
+  const processed = readmeRaw.replace(/\.\/(images\/)/g, import.meta.env.BASE_URL + '$1');
+  renderedMarkdown.value = marked.parse(processed);
 });
 </script>
 

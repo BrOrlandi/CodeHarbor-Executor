@@ -122,6 +122,12 @@ if (DASHBOARD_ENABLED) {
 
   // Serve Vue SPA static files
   const dashboardDistPath = path.join(__dirname, 'dashboard', 'dist');
+  // Serve project images at /dashboard/images (used by docs markdown)
+  const imagesPath = path.join(__dirname, 'images');
+  if (fs.existsSync(imagesPath)) {
+    app.use('/dashboard/images', express.static(imagesPath));
+  }
+
   if (fs.existsSync(dashboardDistPath)) {
     app.use('/dashboard', express.static(dashboardDistPath));
 
