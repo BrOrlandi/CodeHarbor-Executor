@@ -76,7 +76,7 @@ class DependencyService {
 
     // Extract from import statements
     while ((match = importRegex.exec(code)) !== null) {
-      const fullPackageName = match[2];
+      const fullPackageName = match[1];
       // Extract base package name (without version specifier)
       const packageName = this.extractBasePackageName(fullPackageName);
 
