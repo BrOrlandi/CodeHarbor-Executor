@@ -40,6 +40,7 @@ docker run -d \
 - `-e SECRET_KEY=...`: **Required:** Set a secure secret key for authentication.
 - `-e DEFAULT_TIMEOUT=...`: (Optional) Set the default execution timeout in milliseconds.
 - `-e CACHE_SIZE_LIMIT=...`: (Optional) Set the maximum cache size (e.g., "500MB", "2GB").
+- `-e DEPENDENCY_VERSION_STRATEGY=...`: (Optional) Set the dependency version strategy ("update" or "pinned").
 - `-v codeharbor_cache:/app/cache`: **Recommended:** Mount a Docker volume to persist the dependency cache outside the container. This improves performance and avoids re-downloading dependencies when the container restarts.
 - `--restart unless-stopped`: Automatically restart the container unless manually stopped.
 
@@ -93,6 +94,7 @@ PORT=3000
 SECRET_KEY=your-secret-key-here
 DEFAULT_TIMEOUT=60000
 CACHE_SIZE_LIMIT=1GB
+DEPENDENCY_VERSION_STRATEGY=update
 ```
 
 The following environment variables can be used to configure the service:
@@ -101,6 +103,9 @@ The following environment variables can be used to configure the service:
 - `SECRET_KEY`: Authentication token for API calls (default: none)
 - `DEFAULT_TIMEOUT`: Default execution timeout in milliseconds (default: 60000)
 - `CACHE_SIZE_LIMIT`: Maximum cache directory size with support for human-readable values like "500MB", "1GB", etc. (default: "1GB")
+- `DEPENDENCY_VERSION_STRATEGY`: Controls how dependency versions are resolved (default: "update")
+  - `update`: Always installs the latest version of dependencies. When the cache is updated, the previous version is removed.
+  - `pinned`: On the first installation, saves the exact installed versions. On subsequent installations, reuses the saved versions even if newer versions are available. New dependencies (without a saved version) still install as latest.
 
 ## API
 
