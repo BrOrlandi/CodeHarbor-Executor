@@ -4,8 +4,6 @@ services:
     container_name: codeharbor-executor
     restart: unless-stopped
     volumes:
-      - codeharbor_cache:/home/codeharbor/app/cache
-      - codeharbor_executions:/home/codeharbor/app/executions
       - codeharbor_data:/home/codeharbor/app/data
     environment:
       - PORT=3000
@@ -14,10 +12,7 @@ services:
       - DEFAULT_TIMEOUT=60000 # Default timeout in milliseconds
       - CACHE_SIZE_LIMIT=1GB # Max cache size with human-readable values
       - SECRET_KEY=SecretApiToken # Secret key for authentication
-      - MAX_JOB_HISTORY=1000
       - DASHBOARD_ENABLED=true
 
 volumes:
-  codeharbor_cache:
-  codeharbor_executions:
   codeharbor_data:

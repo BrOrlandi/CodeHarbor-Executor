@@ -26,7 +26,9 @@ describe('ExecutionController', () => {
       mockDependencyService,
       mockExecutionService,
       mockCacheService,
-      '/tmp/cache'
+      '/tmp/cache',
+      null,
+      { version: '2.1.0' }
     );
   });
 
@@ -110,7 +112,7 @@ describe('ExecutionController', () => {
 
       expect(res.json).toHaveBeenCalledWith({
         status: 'ok',
-        version: '1.0.0',
+        version: '2.1.0',
         auth: 'enabled',
         defaultTimeout: '30000ms',
       });

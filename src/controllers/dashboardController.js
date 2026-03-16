@@ -5,10 +5,11 @@ const path = require('path');
 const fs = require('fs');
 
 class DashboardController {
-  constructor(jobService, cacheService, executionController) {
+  constructor(jobService, cacheService, executionController, config = {}) {
     this.jobService = jobService;
     this.cacheService = cacheService;
     this.executionController = executionController;
+    this._config = config;
 
     // Cache system info at startup
     const pkg = require(path.join(__dirname, '../../package.json'));
@@ -200,6 +201,33 @@ class DashboardController {
       const deleted = this.jobService.deleteJob(req.params.jobId);
       if (!deleted) return res.status(404).json({ success: false, error: 'Job not found' });
       return res.json({ success: true });
+    } catch (error) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
+  }
+
+  async getSettings(req, res) {
+    try {
+      const { formatFileSize } = require('../utils/parseUtils');
+      const config = this._config;
+
+      return res.json({
+        port: config.port,
+        secretKey: !!config.secretKey,
+        defaultTimeout: config.defaultTimeout,
+        cacheSizeLimit: config.cacheSizeLimit,
+        cacheSizeLimitFormatted:
+          typeof config.cacheSizeLimit === 'number'
+            ? formatFileSize(config.cacheSizeLimit)
+            : null,
+        executionsDataPruneMaxCount: config.pruneMaxCount,
+        dashboardEnabled: config.dashboardEnabled,
+        dependencyVersionStrategy: config.dependencyVersionStrategy,
+        dataDir: config.dataDir,
+        nodeVersion: this._systemInfo.nodeVersion,
+        pnpmVersion: this._systemInfo.pnpmVersion,
+        version: this._systemInfo.version,
+      });
     } catch (error) {
       return res.status(500).json({ success: false, error: error.message });
     }

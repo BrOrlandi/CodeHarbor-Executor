@@ -5,12 +5,13 @@ const crypto = require('crypto');
 const fs = require('fs/promises');
 
 class ExecutionController {
-  constructor(dependencyService, executionService, cacheService, cacheDir, jobService) {
+  constructor(dependencyService, executionService, cacheService, cacheDir, jobService, config = {}) {
     this.dependencyService = dependencyService;
     this.executionService = executionService;
     this.cacheService = cacheService;
     this.cacheDir = cacheDir;
     this.jobService = jobService || null;
+    this._version = config.version || require(path.join(__dirname, '../../package.json')).version;
   }
 
   /**
@@ -337,7 +338,7 @@ class ExecutionController {
   async healthCheck(req, res) {
     return res.json({
       status: 'ok',
-      version: '1.0.0',
+      version: this._version,
       auth: req.app.get('secretKey') ? 'enabled' : 'disabled',
       defaultTimeout: `${req.app.get('defaultTimeout')}ms`,
     });

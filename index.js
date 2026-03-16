@@ -27,18 +27,37 @@ const setupDashboardRoutes = require('./src/routes/dashboardRoutes');
 
 // Environment variables
 const PORT = process.env.PORT || 3000;
-const EXECUTION_DIR = './executions';
-const CACHE_DIR = './dependencies-cache';
-const DATA_DIR = './data';
+const DATA_DIR = process.env.DATA_DIR || './data';
+const EXECUTION_DIR = process.env.EXECUTION_DIR || path.join(DATA_DIR, 'executions');
+const CACHE_DIR = process.env.CACHE_DIR || path.join(DATA_DIR, 'cache');
 const SECRET_KEY = process.env.SECRET_KEY || '';
 const DEFAULT_TIMEOUT = parseInt(process.env.DEFAULT_TIMEOUT || '60000', 10); // 60 seconds default
 const CACHE_SIZE_LIMIT = parseFileSize(process.env.CACHE_SIZE_LIMIT || '1GB');
-const MAX_EXECUTION_DIRS =
-  parseInt(process.env.EXECUTIONS_DATA_PRUNE_MAX_COUNT, 10) || 100;
+
+// Consolidate pruning config: EXECUTIONS_DATA_PRUNE_MAX_COUNT is the primary config.
+// MAX_JOB_HISTORY is deprecated — use it as fallback if set and primary is not.
+const PRUNE_MAX_COUNT = (() => {
+  const pruneEnv = process.env.EXECUTIONS_DATA_PRUNE_MAX_COUNT;
+  const jobHistoryEnv = process.env.MAX_JOB_HISTORY;
+  const parsePruneCount = (raw) => {
+    const parsed = parseInt(raw, 10);
+    return Number.isNaN(parsed) ? 100 : parsed;
+  };
+
+  if (pruneEnv !== undefined) {
+    return parsePruneCount(pruneEnv);
+  }
+  if (jobHistoryEnv !== undefined) {
+    console.warn(
+      'DEPRECATION WARNING: MAX_JOB_HISTORY is deprecated. Use EXECUTIONS_DATA_PRUNE_MAX_COUNT instead.'
+    );
+    return parsePruneCount(jobHistoryEnv);
+  }
+  return 100;
+})();
+
 const DEPENDENCY_VERSION_STRATEGY =
   process.env.DEPENDENCY_VERSION_STRATEGY || 'update';
-const MAX_JOB_HISTORY =
-  parseInt(process.env.MAX_JOB_HISTORY || '1000', 10);
 const DASHBOARD_ENABLED =
   process.env.DASHBOARD_ENABLED !== 'false'; // enabled by default
 
@@ -71,20 +90,22 @@ const dependencyService = new DependencyService(
 const executionService = new ExecutionService(
   EXECUTION_DIR,
   DEFAULT_TIMEOUT,
-  MAX_EXECUTION_DIRS
+  PRUNE_MAX_COUNT
 );
 
 // Initialize database and job service
 const databaseService = new DatabaseService(DATA_DIR);
-const jobService = new JobService(databaseService, MAX_JOB_HISTORY);
+const jobService = new JobService(databaseService, PRUNE_MAX_COUNT);
 
 // Initialize controllers
+const pkg = require('./package.json');
 const executionController = new ExecutionController(
   dependencyService,
   executionService,
   cacheService,
   CACHE_DIR,
-  jobService
+  jobService,
+  { version: pkg.version }
 );
 
 // Setup routes
@@ -97,7 +118,17 @@ if (DASHBOARD_ENABLED) {
   const dashboardController = new DashboardController(
     jobService,
     cacheService,
-    executionController
+    executionController,
+    {
+      port: PORT,
+      secretKey: SECRET_KEY,
+      defaultTimeout: DEFAULT_TIMEOUT,
+      cacheSizeLimit: CACHE_SIZE_LIMIT,
+      pruneMaxCount: PRUNE_MAX_COUNT,
+      dashboardEnabled: DASHBOARD_ENABLED,
+      dependencyVersionStrategy: DEPENDENCY_VERSION_STRATEGY,
+      dataDir: DATA_DIR,
+    }
   );
 
   // Mount dashboard API routes
@@ -140,13 +171,51 @@ if (DASHBOARD_ENABLED) {
   console.log('Dashboard enabled');
 }
 
+// Migrate old directory layout to unified data/ structure
+async function migrateOldDirectories() {
+  const fsp = require('fs').promises;
+  const oldExecutionsDir = './executions';
+  const oldCacheDir = './dependencies-cache';
+  const newExecutionsDir = EXECUTION_DIR;
+  const newCacheDir = CACHE_DIR;
+
+  // Ensure parent directories exist for custom paths
+  await ensureDirs([path.dirname(newExecutionsDir), path.dirname(newCacheDir)]);
+
+  // Migrate old executions/ directory
+  if (fs.existsSync(oldExecutionsDir) && !fs.existsSync(newExecutionsDir)) {
+    try {
+      await fsp.rename(oldExecutionsDir, newExecutionsDir);
+      console.log(`Migrated ${oldExecutionsDir} -> ${newExecutionsDir}`);
+    } catch (err) {
+      console.warn(`Could not migrate ${oldExecutionsDir}: ${err.message}. Please move it manually to ${newExecutionsDir}`);
+    }
+  }
+
+  // Migrate old dependencies-cache/ directory
+  if (fs.existsSync(oldCacheDir) && !fs.existsSync(newCacheDir)) {
+    try {
+      await fsp.rename(oldCacheDir, newCacheDir);
+      console.log(`Migrated ${oldCacheDir} -> ${newCacheDir}`);
+    } catch (err) {
+      console.warn(`Could not migrate ${oldCacheDir}: ${err.message}. Please move it manually to ${newCacheDir}`);
+    }
+  }
+}
+
 // Start the server
 let server;
 
 async function start() {
   try {
-    // Ensure necessary directories exist
-    await ensureDirs([EXECUTION_DIR, CACHE_DIR, DATA_DIR]);
+    // Ensure base data directory exists before migration
+    await ensureDirs([DATA_DIR]);
+
+    // Migrate old directory layout (pre-v2.1) to unified data/ structure
+    await migrateOldDirectories();
+
+    // Ensure subdirectories exist (after migration so we don't block rename)
+    await ensureDirs([EXECUTION_DIR, CACHE_DIR]);
 
     // Initialize database
     databaseService.initialize();
@@ -166,11 +235,11 @@ async function start() {
       console.log(`Default execution timeout: ${DEFAULT_TIMEOUT}ms`);
       console.log(`Authentication: ${SECRET_KEY ? 'enabled' : 'disabled'}`);
       console.log(`Cache size limit: ${formatFileSize(CACHE_SIZE_LIMIT)}`);
-      console.log(`Maximum execution directories: ${MAX_EXECUTION_DIRS}`);
+      console.log(`Data directory: ${DATA_DIR}`);
+      console.log(`Pruning max count: ${PRUNE_MAX_COUNT}`);
       console.log(
         `Dependency version strategy: ${DEPENDENCY_VERSION_STRATEGY}`
       );
-      console.log(`Max job history: ${MAX_JOB_HISTORY}`);
       console.log(`Dashboard: ${DASHBOARD_ENABLED ? 'enabled' : 'disabled'}`);
     });
   } catch (error) {

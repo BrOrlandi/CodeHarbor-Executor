@@ -17,7 +17,8 @@ describe('GET /health', () => {
 
     const body = await res.json();
     expect(body.status).toBe('ok');
-    expect(body.version).toBe('1.0.0');
+    const pkg = require('../../package.json');
+    expect(body.version).toBe(pkg.version);
     expect(body.auth).toBe('enabled');
     expect(body).toHaveProperty('defaultTimeout');
   });

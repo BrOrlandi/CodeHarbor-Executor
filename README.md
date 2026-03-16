@@ -45,7 +45,6 @@ docker run -d \
   -e SECRET_KEY="your-super-secret-key" \
   -e DEFAULT_TIMEOUT=60000 \
   -e CACHE_SIZE_LIMIT="1GB" \
-  -v codeharbor_cache:/home/codeharbor/app/dependencies-cache \
   -v codeharbor_data:/home/codeharbor/app/data \
   --restart unless-stopped \
   brorlandi/codeharbor-executor:latest
@@ -60,8 +59,7 @@ docker run -d \
 - `-e DEFAULT_TIMEOUT=...`: (Optional) Set the default execution timeout in milliseconds.
 - `-e CACHE_SIZE_LIMIT=...`: (Optional) Set the maximum cache size (e.g., "500MB", "2GB").
 - `-e DEPENDENCY_VERSION_STRATEGY=...`: (Optional) Set the dependency version strategy ("update" or "pinned").
-- `-v codeharbor_cache:...`: **Recommended:** Mount a Docker volume to persist the dependency cache.
-- `-v codeharbor_data:...`: **Recommended:** Mount a Docker volume to persist the job history database.
+- `-v codeharbor_data:...`: **Recommended:** Mount a Docker volume to persist all data (database, cache, and executions).
 - `--restart unless-stopped`: Automatically restart the container unless manually stopped.
 
 Adjust the environment variables (`-e`) as needed based on the [Configuration](#configuration) section.
@@ -120,7 +118,7 @@ SECRET_KEY=your-secret-key-here
 DEFAULT_TIMEOUT=60000
 CACHE_SIZE_LIMIT=1GB
 DEPENDENCY_VERSION_STRATEGY=update
-MAX_JOB_HISTORY=1000
+EXECUTIONS_DATA_PRUNE_MAX_COUNT=100
 DASHBOARD_ENABLED=true
 ```
 
@@ -133,9 +131,11 @@ The following environment variables can be used to configure the service:
 | `DEFAULT_TIMEOUT` | `60000` | Default execution timeout in milliseconds |
 | `CACHE_SIZE_LIMIT` | `1GB` | Maximum cache directory size (e.g., "500MB", "2GB") |
 | `DEPENDENCY_VERSION_STRATEGY` | `update` | How dependency versions are resolved (`update` or `pinned`) |
-| `MAX_JOB_HISTORY` | `1000` | Maximum number of job records stored in the database |
+| `EXECUTIONS_DATA_PRUNE_MAX_COUNT` | `100` | Maximum number of execution directories and job history records to keep |
 | `DASHBOARD_ENABLED` | `true` | Enable or disable the web dashboard |
-| `EXECUTIONS_DATA_PRUNE_MAX_COUNT` | `100` | Maximum number of execution directories to keep on disk |
+| `DATA_DIR` | `./data` | Root directory for all persistent data (database, cache, executions) |
+| `EXECUTION_DIR` | `${DATA_DIR}/executions` | Directory where per-execution workspaces are stored |
+| `CACHE_DIR` | `${DATA_DIR}/cache` | Directory for dependency cache entries |
 
 **Dependency version strategies:**
 
@@ -277,7 +277,7 @@ You can also try these examples interactively in the [Dashboard](/dashboard/exam
 ```json
 {
   "status": "ok",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "auth": "enabled",
   "defaultTimeout": "60000ms"
 }

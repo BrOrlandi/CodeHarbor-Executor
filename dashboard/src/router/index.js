@@ -38,6 +38,11 @@ const routes = [
     component: () => import('@/views/CronsView.vue'),
   },
   {
+    path: '/settings',
+    name: 'settings',
+    component: () => import('@/views/SettingsView.vue'),
+  },
+  {
     path: '/guide',
     name: 'guide',
     component: () => import('@/views/DocsView.vue'),
