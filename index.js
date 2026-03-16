@@ -179,6 +179,9 @@ async function migrateOldDirectories() {
   const newExecutionsDir = EXECUTION_DIR;
   const newCacheDir = CACHE_DIR;
 
+  // Ensure parent directories exist for custom paths
+  await ensureDirs([path.dirname(newExecutionsDir), path.dirname(newCacheDir)]);
+
   // Migrate old executions/ directory
   if (fs.existsSync(oldExecutionsDir) && !fs.existsSync(newExecutionsDir)) {
     try {

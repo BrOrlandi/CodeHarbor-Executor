@@ -216,7 +216,10 @@ class DashboardController {
         secretKey: !!config.secretKey,
         defaultTimeout: config.defaultTimeout,
         cacheSizeLimit: config.cacheSizeLimit,
-        cacheSizeLimitFormatted: formatFileSize(config.cacheSizeLimit),
+        cacheSizeLimitFormatted:
+          typeof config.cacheSizeLimit === 'number'
+            ? formatFileSize(config.cacheSizeLimit)
+            : null,
         executionsDataPruneMaxCount: config.pruneMaxCount,
         dashboardEnabled: config.dashboardEnabled,
         dependencyVersionStrategy: config.dependencyVersionStrategy,
