@@ -29,6 +29,10 @@
           <span class="nav-text" v-show="!sidebarCollapsed">Crons</span>
           <span class="chip-soon" v-show="!sidebarCollapsed">SOON</span>
         </router-link>
+        <router-link to="/settings" class="nav-link" active-class="active">
+          <svg class="nav-svg" viewBox="0 0 20 20" fill="currentColor"><path d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.062 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"/></svg>
+          <span class="nav-text" v-show="!sidebarCollapsed">Settings</span>
+        </router-link>
         <router-link to="/guide" class="nav-link" active-class="active">
           <svg class="nav-svg" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a2 2 0 012-2h7l5 5v9a2 2 0 01-2 2H5a2 2 0 01-2-2V4zm2-.5a.5.5 0 00-.5.5v12a.5.5 0 00.5.5h10a.5.5 0 00.5-.5V7.5H12a.5.5 0 01-.5-.5V3.5H5zM13 4.2V6.5h2.3L13 4.2zM7 10h6v1.5H7V10zm0 3h4v1.5H7V13z"/></svg>
           <span class="nav-text" v-show="!sidebarCollapsed">Docs</span>
