@@ -34,8 +34,6 @@ RUN groupadd -r codeharbor && \
 WORKDIR /home/codeharbor/app
 
 # Set environment variables
-ENV EXECUTION_DIR='/home/codeharbor/app/executions'
-ENV CACHE_DIR='/home/codeharbor/app/dependencies-cache'
 ENV DATA_DIR='/home/codeharbor/app/data'
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV npm_config_build_from_source=true
@@ -56,8 +54,8 @@ COPY . .
 # Build dashboard frontend
 RUN cd dashboard && pnpm install --no-frozen-lockfile && pnpm build || echo "Dashboard build skipped"
 
-# Create directories based on environment variables
-RUN mkdir -p ${EXECUTION_DIR} ${CACHE_DIR} ${DATA_DIR} && \
+# Create data directory with subdirectories
+RUN mkdir -p ${DATA_DIR}/executions ${DATA_DIR}/cache && \
 	chown -R codeharbor:codeharbor /home/codeharbor/app
 
 # Adjust ownership of the app directory
@@ -66,8 +64,8 @@ RUN chown -R codeharbor:codeharbor /home/codeharbor/app
 # Switch to non-root user
 USER codeharbor
 
-# Define volumes for persistent storage
-VOLUME ["${CACHE_DIR}", "${EXECUTION_DIR}", "${DATA_DIR}"]
+# Define volume for persistent storage
+VOLUME ["${DATA_DIR}"]
 
 # Expose the application port
 EXPOSE 3000

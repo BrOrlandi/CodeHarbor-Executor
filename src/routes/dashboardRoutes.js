@@ -18,6 +18,7 @@ function setupDashboardRoutes(dashboardController) {
   router.delete('/jobs/:jobId', dashboardController.deleteJob.bind(dashboardController));
   router.get('/cache', dashboardController.getCacheAnalysis.bind(dashboardController));
   router.get('/info', dashboardController.getInfo.bind(dashboardController));
+  router.get('/settings', dashboardController.getSettings.bind(dashboardController));
   router.post('/execute', dashboardController.submitJob.bind(dashboardController));
 
   return router;

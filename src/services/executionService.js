@@ -7,11 +7,7 @@ class ExecutionService {
   constructor(executionDir, defaultTimeout, maxExecutionDirs) {
     this.executionDir = executionDir;
     this.defaultTimeout = defaultTimeout;
-    // Use the passed maxExecutionDirs parameter, falling back to environment variable if not provided
-    this.maxExecutionDirs =
-      maxExecutionDirs ||
-      parseInt(process.env.EXECUTIONS_DATA_PRUNE_MAX_COUNT, 10) ||
-      100;
+    this.maxExecutionDirs = maxExecutionDirs || 100;
   }
 
   /**

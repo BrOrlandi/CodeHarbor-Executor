@@ -1,11 +1,11 @@
 {
   "name": "codeharbor-executor",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Node.js code execution service for CodeHarbor n8n node",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon --ignore './dependencies-cache/' --ignore './executions/' --ignore './bruno-rest-client/' --ignore './data/' --ignore './dashboard/' index.js",
+    "dev": "nodemon --ignore './data/' --ignore './bruno-rest-client/' --ignore './dashboard/' index.js",
     "test": "vitest run",
     "test:unit": "vitest run tests/unit",
     "test:e2e": "vitest run tests/e2e --testTimeout=60000",

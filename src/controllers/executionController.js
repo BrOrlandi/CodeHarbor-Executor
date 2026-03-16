@@ -337,7 +337,7 @@ class ExecutionController {
   async healthCheck(req, res) {
     return res.json({
       status: 'ok',
-      version: '1.0.0',
+      version: '2.1.0',
       auth: req.app.get('secretKey') ? 'enabled' : 'disabled',
       defaultTimeout: `${req.app.get('defaultTimeout')}ms`,
     });
