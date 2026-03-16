@@ -39,15 +39,19 @@ const CACHE_SIZE_LIMIT = parseFileSize(process.env.CACHE_SIZE_LIMIT || '1GB');
 const PRUNE_MAX_COUNT = (() => {
   const pruneEnv = process.env.EXECUTIONS_DATA_PRUNE_MAX_COUNT;
   const jobHistoryEnv = process.env.MAX_JOB_HISTORY;
+  const parsePruneCount = (raw) => {
+    const parsed = parseInt(raw, 10);
+    return Number.isNaN(parsed) ? 100 : parsed;
+  };
 
-  if (pruneEnv) {
-    return parseInt(pruneEnv, 10) || 100;
+  if (pruneEnv !== undefined) {
+    return parsePruneCount(pruneEnv);
   }
-  if (jobHistoryEnv) {
+  if (jobHistoryEnv !== undefined) {
     console.warn(
       'DEPRECATION WARNING: MAX_JOB_HISTORY is deprecated. Use EXECUTIONS_DATA_PRUNE_MAX_COUNT instead.'
     );
-    return parseInt(jobHistoryEnv, 10) || 100;
+    return parsePruneCount(jobHistoryEnv);
   }
   return 100;
 })();
@@ -172,8 +176,8 @@ async function migrateOldDirectories() {
   const fsp = require('fs').promises;
   const oldExecutionsDir = './executions';
   const oldCacheDir = './dependencies-cache';
-  const newExecutionsDir = path.join(DATA_DIR, 'executions');
-  const newCacheDir = path.join(DATA_DIR, 'cache');
+  const newExecutionsDir = EXECUTION_DIR;
+  const newCacheDir = CACHE_DIR;
 
   // Migrate old executions/ directory
   if (fs.existsSync(oldExecutionsDir) && !fs.existsSync(newExecutionsDir)) {

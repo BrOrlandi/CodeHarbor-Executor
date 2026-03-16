@@ -134,6 +134,8 @@ The following environment variables can be used to configure the service:
 | `EXECUTIONS_DATA_PRUNE_MAX_COUNT` | `100` | Maximum number of execution directories and job history records to keep |
 | `DASHBOARD_ENABLED` | `true` | Enable or disable the web dashboard |
 | `DATA_DIR` | `./data` | Root directory for all persistent data (database, cache, executions) |
+| `EXECUTION_DIR` | `${DATA_DIR}/executions` | Directory where per-execution workspaces are stored |
+| `CACHE_DIR` | `${DATA_DIR}/cache` | Directory for dependency cache entries |
 
 **Dependency version strategies:**
 

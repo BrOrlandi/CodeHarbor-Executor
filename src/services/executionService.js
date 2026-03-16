@@ -7,7 +7,7 @@ class ExecutionService {
   constructor(executionDir, defaultTimeout, maxExecutionDirs) {
     this.executionDir = executionDir;
     this.defaultTimeout = defaultTimeout;
-    this.maxExecutionDirs = maxExecutionDirs || 100;
+    this.maxExecutionDirs = maxExecutionDirs ?? 100;
   }
 
   /**
