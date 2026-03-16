@@ -94,12 +94,14 @@ const databaseService = new DatabaseService(DATA_DIR);
 const jobService = new JobService(databaseService, PRUNE_MAX_COUNT);
 
 // Initialize controllers
+const pkg = require('./package.json');
 const executionController = new ExecutionController(
   dependencyService,
   executionService,
   cacheService,
   CACHE_DIR,
-  jobService
+  jobService,
+  { version: pkg.version }
 );
 
 // Setup routes
@@ -167,7 +169,7 @@ if (DASHBOARD_ENABLED) {
 
 // Migrate old directory layout to unified data/ structure
 async function migrateOldDirectories() {
-  const fsp = require('fs/promises');
+  const fsp = require('fs').promises;
   const oldExecutionsDir = './executions';
   const oldCacheDir = './dependencies-cache';
   const newExecutionsDir = path.join(DATA_DIR, 'executions');
@@ -199,11 +201,14 @@ let server;
 
 async function start() {
   try {
-    // Ensure necessary directories exist
-    await ensureDirs([DATA_DIR, EXECUTION_DIR, CACHE_DIR]);
+    // Ensure base data directory exists before migration
+    await ensureDirs([DATA_DIR]);
 
     // Migrate old directory layout (pre-v2.1) to unified data/ structure
     await migrateOldDirectories();
+
+    // Ensure subdirectories exist (after migration so we don't block rename)
+    await ensureDirs([EXECUTION_DIR, CACHE_DIR]);
 
     // Initialize database
     databaseService.initialize();

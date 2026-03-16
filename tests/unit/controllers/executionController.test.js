@@ -26,7 +26,9 @@ describe('ExecutionController', () => {
       mockDependencyService,
       mockExecutionService,
       mockCacheService,
-      '/tmp/cache'
+      '/tmp/cache',
+      null,
+      { version: '2.1.0' }
     );
   });
 

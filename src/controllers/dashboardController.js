@@ -207,23 +207,27 @@ class DashboardController {
   }
 
   async getSettings(req, res) {
-    const { formatFileSize } = require('../utils/parseUtils');
-    const config = this._config;
+    try {
+      const { formatFileSize } = require('../utils/parseUtils');
+      const config = this._config;
 
-    return res.json({
-      port: config.port,
-      secretKey: !!config.secretKey,
-      defaultTimeout: config.defaultTimeout,
-      cacheSizeLimit: config.cacheSizeLimit,
-      cacheSizeLimitFormatted: formatFileSize(config.cacheSizeLimit),
-      executionsDataPruneMaxCount: config.pruneMaxCount,
-      dashboardEnabled: config.dashboardEnabled,
-      dependencyVersionStrategy: config.dependencyVersionStrategy,
-      dataDir: config.dataDir,
-      nodeVersion: this._systemInfo.nodeVersion,
-      pnpmVersion: this._systemInfo.pnpmVersion,
-      version: this._systemInfo.version,
-    });
+      return res.json({
+        port: config.port,
+        secretKey: !!config.secretKey,
+        defaultTimeout: config.defaultTimeout,
+        cacheSizeLimit: config.cacheSizeLimit,
+        cacheSizeLimitFormatted: formatFileSize(config.cacheSizeLimit),
+        executionsDataPruneMaxCount: config.pruneMaxCount,
+        dashboardEnabled: config.dashboardEnabled,
+        dependencyVersionStrategy: config.dependencyVersionStrategy,
+        dataDir: config.dataDir,
+        nodeVersion: this._systemInfo.nodeVersion,
+        pnpmVersion: this._systemInfo.pnpmVersion,
+        version: this._systemInfo.version,
+      });
+    } catch (error) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
   }
 
   async getInfo(req, res) {
