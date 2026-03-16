@@ -1,10 +1,11 @@
 # CodeHarbor Executor Dockerfile
 FROM node:22-slim
 
-# Install Chromium and its dependencies
+# Install Chromium, gosu, and dependencies
 RUN apt-get update \
 	&& apt-get install -y \
 	chromium \
+	gosu \
 	fonts-ipafont-gothic \
 	fonts-wqy-zenhei \
 	fonts-thai-tlwg \
@@ -61,14 +62,16 @@ RUN mkdir -p ${DATA_DIR}/executions ${DATA_DIR}/cache && \
 # Adjust ownership of the app directory
 RUN chown -R codeharbor:codeharbor /home/codeharbor/app
 
-# Switch to non-root user
-USER codeharbor
-
 # Define volume for persistent storage
 VOLUME ["${DATA_DIR}"]
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Expose the application port
 EXPOSE 3000
 
-# Define the command to run your application
+# Entrypoint fixes data dir permissions then drops to codeharbor user
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["node", "index.js"]
